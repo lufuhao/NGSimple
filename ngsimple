@@ -1,0 +1,118 @@
+#!/bin/sh
+RunDir=$(cd `dirname $0`; pwd)
+MachType=$(uname -m)
+
+################# help message ######################################
+help()
+{
+cat<<HELP
+
+ngsimple --- NGS sIMulation PipeLinE
+
+Version: 20140904
+
+Descriptions:
+Simulate Illumina reads from reference sequences with customized 
+setting, assemble and evaluate, which allow you to choose a better
+ design for your NGS plan.
+
+Options:
+  -h    Print this help message
+  -i    CONFIG file
+  -t    Number of threads, default: 1
+  -s    Not run simulation
+  -a    Not run assembly
+
+Example:
+  ngsimple -i ./chr1.fa -t 10
+
+Author:
+  Fu-Hao Lu
+  Post-Doctoral Scientist in Micheal Bevan laboratory
+  Cell and Developmental Department, John Innes Centre
+  Norwich NR4 7UH, United Kingdom
+  E-mail: Fu-Hao.Lu@jic.ac.uk
+HELP
+exit 0
+}
+[ -z "$1" ] && help
+[ "$1" = "-h" ] && help
+#################### Defaults #######################################
+echo "Adding $RunDir/bin into PATH"
+export PATH=$RunDir/bin:$PATH
+
+###Defaults
+opt_s=0
+opt_a=0
+#################### parameters #####################################
+while [ -n "$1" ]; do
+case "$1" in
+  -h) help;shift 1;;
+  -i) opt_i=$2;shift 2;;
+  -t) opt_t=$2;shift 2;;
+  -s) opt_s=1;shift 1;;
+  -a) opt_a=1;shift 1;;
+  --) shift;break;;
+  -*) echo "error: no such option $1. -h for help";exit 1;;
+  *) break;;
+esac
+done
+
+if [ -s $opt_i ]; then
+  echo "Config file detected: $opt_i"
+else
+  echo "Config file $opt_i not exists"
+  exit 0
+fi
+if [ `echo "$opt_t>=1"|bc` ]; then
+  opt_t=${opt_t%.*}
+  echo "Number of threads: $opt_t"
+else
+  echo "Wrong threads number input"
+  exit 0
+fi
+
+if [ "$opt_s" -eq "0" ]; then
+  echo "\n\nStep1 simulation starting..."
+  if which mason >/dev/null 2>&1; then
+    echo "Mason detected: "`which mason`
+  else
+    echo "Mason program need to be installed before running this script"
+    exit 0
+  fi
+  perl $RunDir/1.simulation.pl --config $opt_i
+  echo "Step1 simulation finished..."
+else
+  echo "\n\nStep1 simulation is ignored"
+fi
+
+if [ "$opt_a" -eq "0" ]; then
+  echo "\n\nStep2 assembly starting..."
+  if which java >/dev/null 2>&1; then
+    echo "java detected: "`which java`
+  else
+    echo "JDK/JRE program need to be installed before running this script"
+    exit 0
+  fi
+  if which velveth >/dev/null 2>&1 && which velvetg >/dev/null 2>&1; then
+    echo "velveth detected: "`which velveth`
+    echo "velvetg detected: "`which velvetg`
+  else
+    echo "Velvet program need to be installed before running this script"
+    exit 0
+  fi
+  if which nucmer >/dev/null 2>&1 && which delta-filter >/dev/null 2>&1 && which mummerplot >/dev/null 2>&1; then
+    echo "nucmer detected: "`which nucmer`
+    echo "delta-filter detected: "`which delta-filter`
+    echo "mummerplot detected: "`which mummerplot`
+  else
+    echo "MUMmer program need to be installed before running this script"
+    exit 0
+  fi
+  perl $RunDir/2.assembly.pl --config $opt_i --threads $opt_t
+  echo "Step2 assembly finished..."
+else
+  echo "\n\nStep2 assembly is ignored"
+fi
+echo "\nAll done\n"
+exit 1
