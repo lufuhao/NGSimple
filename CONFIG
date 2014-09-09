@@ -1,0 +1,37 @@
+#Will ignore and NOT read lines starting with * or # or empty line
+#NOT read this line
+*NOT read this line
+#Example:
+#reference=/Full/path/to/reference.fasta
+
+reference=
+
+----------------------@library----------------------------------
+#example:
+#UniqueIndex: library name (space-free)
+#tab-delimited
+#UniqueIndex	lib_type	read_length	libcov	insert_size
+#lib1	pe	200	30	600
+#lib2	se	300	5	0
+#lib3	mp	150	10	7000
+
+lib1
+lib2
+lib3
+
+
+
+------------------------@indice----------------------------------
+#Example:
+#UniqueFolderName: assembly name (space free)
+#UniqueFolderName	index combination
+#tab-delimited
+*IMPORTANT: should support THREE libraries each folder at most;
+#Group1	lib1	lib2
+*will assemble lib1 and lib2 into one assembly under the folder Group1
+#Group2	lib1	lib2	lib3
+*will assemble lib1 and lib2 into one assembly under the folder Group1
+
+Assem1
+Assem2
+Assem3
