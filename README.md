@@ -1,0 +1,119 @@
+NGSimple (Next-Generation illumina SIMulation PipeLinE) 
+------------------------------------------------------------------
+1. Usage
+
+This pipeline, mainly written in perl is designed to simulate NGS 
+parameters (illumina sequencing type, read length, insert size and
+ coverage) based on a given reference, and give a report to choose
+ the best parameter combination that could contribute to a good 
+assembly.
+
+simulation.pl generates simulated reads from a reference in fasta
+ format. It's recommended to start with a short reference (~5M 
+bases), in case that the number of generated reads is too large for
+ assembly.
+    input: reference + parameter
+    output: ./1.fastq/reads.fastq
+
+assemly.pl assemble the reads (./1.fastq/reads.fastq) from those 
+designed libraries to assemblies. based on the parameters specified 
+in CONFIG file. It will generate assmblies with different K-mer 
+(./2.assembly/*), and choose the assembly with largest n50. Finally,
+ it will produce a quartile summary and mummerplot for each for you 
+to select a good parameter combination.
+
+insert_size.pl will take real Illumina data as input, trim/clean (
+trimmomatic, evalaute the proportion of overlapped pairs (fastq-join),
+ reverse complement (fastx_toolkit) , align to reference sequence 
+(bwa) and then determine the insert size distribution. You could 
+design the steps to ingnore any step in case it's not quite necessary. 
+In addition, you could provide any SAM flags to keep an alignment, 
+for example, if read mapping is produced by BWA, XT:A:U flag could be
+ used to filter the unique mapped reads.
+
+NOTE: the insert size is NOT collected by PICARD CollectInsertSizeMetrics.jar
+
+Author:
+  Fu-Hao Lu
+  Post-Doctoral Scientist in Micheal Bevan laboratory
+  Cell and Developmental Department, John Innes Centre
+  Norwich NR4 7UH, United Kingdom
+  E-mail: Fu-Hao.Lu@jic.ac.uk
+----------------------------------------------------------------------
+
+2. Installation
+This pipeline makes use of several external programs. So you may need to 
+separately install them before running this pipeline. The bash scripts in
+ ProgramRoot/utils/ might help you install them if you did not install or 
+they are not available in PATH. 
+
+Some necessary linux dependancies
+	make, cmake, gcc, g++, gcc-c++, tar, unzip, GD, etc
+	zlib, boost, ncurses, sparsehash, etc
+	PerlIO::gzip, GD::Graphics::bars, Getopt::Long, List::Util, Cwd, FindBin, etc
+	
+External programs:
+Program		Necessary/Optional	Homepage
+Mason		Msg	https://www.seqan.de/projects/mason/
+Trimmomatic	Msg	http://www.usadellab.org/cms/?page=trimmomatic
+velvet		Msg	https://www.ebi.ac.uk/~zerbino/velvet/
+MUMmer		Msg	http://mummer.sourceforge.net/
+fastqc		Msg	http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+cutadapt	Opt	https://code.google.com/p/cutadapt/
+fastq-join	Opt	https://code.google.com/p/ea-utils/
+fastx_toolkit	Opt	http://hannonlab.cshl.edu/fastx_toolkit/index.html
+BWA		Msg	http://bio-bwa.sourceforge.net/
+SAMtools	Msg	http://samtools.sourceforge.net/
+PICARD_tools	Msg	http://picard.sourceforge.net/
+
+NOTE: the programs need to set the environmental variables (PATH, 
+CPLUS_INCLUDE_PATH, LD_LIBRARY_PATH, etc) to be easily found. 
+
+The pipeline ifself does NOT need compilation. Just uncompress it somewhere
+ you want, execuate the /path/to/program_root/ngsimple. Put in PATH if 
+you want (/etc/profile or ~/.bashrc): 
+	export PATH=/path/to/program_root:$PATH
+
+
+3. Running
+3.1 configuring parameter $PWD/CONFIG
+
+$PWD/CONFIG file
+################## File border ######################################
+#Example:
+#reference=/Full/path/to/reference.fasta
+reference=
+#example:
+#tab-delimited
+#LibID	libtype	readlength	libcov	insert_size
+#lib1	pe	200	30	600
+#lib2	se	300	5	0
+#lib3	mp	150	10	7000
+lib1
+lib2
+lib3
+#Example:
+#UniqueFolderName: assembly name (space free)
+#UniqueFolderName	index combination
+#tab-delimited
+*IMPORTANT: should support THREE libraries each folder at most;
+#Group1	lib1	lib2
+*will assemble lib1 and lib2 into one assembly under the folder Group1
+#Group2	lib1	lib2	lib3
+*will assemble lib1 and lib2 into one assembly under the folder Group1
+Assem1
+Assem2
+Assem3
+################## File border ######################################
+
+
+3.2 Running NGSimple
+	bash$ ngsimple -i CONFIG -t 5
+
+3.3 Determine insert size distribution (NOT using Picard CollectInsertSizeMetrics.jar)
+	bash$ 3.insertsize.pl --help
+
+4. Trouble-shooting
+Every perl script could be separately used for advanced users. In case
+ you have any problem or question about this pipeline, please E-mail 
+me at Fu-Hao.Lu@jic.ac.uk
