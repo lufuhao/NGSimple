@@ -29,7 +29,7 @@ cd $RunDir/samtools/v$samtools_version/
 tar xvf $RunDir/samtools/v$samtools_version/src/$samtools_package > /dev/null
 mv samtools* $MachType
 cd $RunDir/samtools/v$samtools_version/$MachType
-make > make.log
+make CXXFLAGS=-fPIC CFLAGS=-fPIC CPPFLAGS=-fPIC > make.log
 if [ ! -s ./samtools ]; then
   echo "Compiling Samtools failed"
   exit 0
