@@ -5,7 +5,7 @@ MachType=$(uname -m)
 
 if which bwa 2>/dev/null; then
   echo "BWA already installed"
-  exit 1
+  exit 0
 fi
 
 if [ ! -d $RunDir/bwa ]; then
@@ -43,20 +43,20 @@ else
     make > make.log
     if [ ! -s $RunDir/bwa/version/$MachType/bwa ]; then
       echo "Compiling BWA failed. Exit..."
-      exit 0
+      exit 1
     fi
     BWA_version_temp=`./bwa 2>&1 | grep 'Version'`
     BWA_version=${BWA_version_temp##* }
     if [ "v$BWA_version" = "v" ]; then
       echo "Can not get BWA version. Exit..."
-      exit 0
+      exit 1
     fi
     cd $RunDir/bwa
     mv version v$BWA_version
     cd $RunDir/bwa/v$BWA_version/$MachType
   else
     echo "Can not download BWA using subversion. Please manually download BWA source code to $RunDir/bwa from http://sourceforge.net/projects/bio-bwa"
-    exit 0
+    exit 1
   fi
 fi
 echo "BWA version: $BWA_version"
@@ -80,4 +80,4 @@ echo "export LIBRARY_PATH=$RunDir/bwa/v$BWA_version/$MachType/lib"':$LIBRARY_PAT
 echo "export MAN_PATH=$RunDir/bwa/v$BWA_version/$MachType/man"':$MAN_PATH'
 echo "\n\n\n"
 
-exit 1
+exit 0

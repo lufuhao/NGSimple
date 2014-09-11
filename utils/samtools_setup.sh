@@ -15,7 +15,7 @@ fi
 cd $RunDir/samtools
 if [ ! -s $RunDir/samtools/samtools*.tar.bz2 ]; then
   echo "Please download samtools source package to $RunDir/samtools/ from website: http://sourceforge.net/projects/samtools"
-  exit 0
+  exit 1
 fi
 samtools_package=`ls samtools*.tar.bz2`
 samtools_basename=${samtools_package%.*.*}
@@ -32,7 +32,7 @@ cd $RunDir/samtools/v$samtools_version/$MachType
 make CXXFLAGS+=" -fPIC" > make.log
 if [ ! -s ./samtools ]; then
   echo "Compiling Samtools failed"
-  exit 0
+  exit 1
 fi
 mkdir -p 'bin' 'include' 'lib' 'man/man1'
 cp samtools misc/ace2sam misc/maq2sam-long misc/maq2sam-short misc/md5fa misc/md5sum-lite misc/wgsim misc/blast2sam.pl misc/bowtie2sam.pl misc/export2sam.pl misc/interpolate_sam.pl misc/novo2sam.pl misc/plot-bamstats misc/psl2sam.pl misc/sam2vcf.pl misc/samtools.pl misc/seq_cache_populate.pl misc/soap2sam.pl misc/varfilter.py misc/wgsim_eval.pl misc/zoom2sam.pl $RunDir/samtools/v$samtools_version/$MachType/bin/
@@ -59,4 +59,4 @@ echo "export LIBRARY_PATH=$RunDir/samtools/v$samtools_version/$MachType/lib"':$L
 echo "export MAN_PATH=$RunDir/samtools/v$samtools_version/$MachType/man"':$MAN_PATH'
 echo "\n\n\n"
 
-exit 1
+exit 0

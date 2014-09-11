@@ -28,7 +28,7 @@
 
 if which mason 2>/dev/null; then
   echo "Mason already installed"
-  exit 1
+  exit 0
 fi
 
 RunDir=$(cd `dirname $0`; pwd)
@@ -55,7 +55,7 @@ else
     echo "Mason source code detected in folder $RunDir/mason/seqan-trunk"
   else
     echo "Can not find Mason source code"
-    exit 0
+    exit 1
   fi
 fi
 if [ -s mason_v2010.tar.gz ]; then
@@ -76,7 +76,7 @@ if [ -s $RunDir/mason/v2010/$MachType/bin/mason ]; then
   ln -sf $RunDir/mason/v2010/$MachType/bin/mason $RunDir/bin/
 else
   echo "Compiling Mason failed"
-  exit 0
+  exit 1
 fi
 mv $RunDir/mason/seqan-trunk/core/include $RunDir/mason/v2010/$MachType/
 rm -rf $RunDir/mason/seqan-trunk
@@ -88,4 +88,4 @@ echo "###Mason"
 echo "export PATH=$RunDir/mason/v2010/$MachType/bin"':$PATH'
 echo "export CPLUS_INCLUDE_PATH=$RunDir/mason/v2010/$MachType/include"':$CPLUS_INCLUDE_PATH'
 echo "\n\n\n"
-exit 1
+exit 0

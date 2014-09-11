@@ -9,7 +9,7 @@ MachType=$(uname -m)
 
 if which cutadapt 2>/dev/null; then
   echo "Cutadapt already installed"
-  exit 1
+  exit 0
 fi
 
 if [ ! -d $RunDir/cutadapt ]; then
@@ -30,7 +30,7 @@ if [ -s cutadapt-*.tar.gz ]; then
   fi
 else
   echo "Downloading CutAdapt failed"
-  exit 0
+  exit 1
 fi
 if [ -d $RunDir/cutadapt/$cutadapt_basename ]; then
  rm -rf $RunDir/cutadapt/$cutadapt_basename
@@ -55,7 +55,7 @@ elif [ -s $HOME/.local/bin/cutadapt ]; then
   cutadapt_path="$HOME/.local/bin"
 else
   echo "Can not find installed cutadapt path"
-  exit 0
+  exit 1
 fi
 echo "*******************************************"
 echo "************ Important ********************"
@@ -64,3 +64,5 @@ echo "Add to /etc/profile or ~/.bashrc\n\n"
 echo "###cutadapt"
 echo "export PATH=$cutadapt_path"':$PATH'
 echo "\n\n\n"
+
+exit 0

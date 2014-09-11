@@ -18,7 +18,7 @@ MachType=$(uname -m)
 
 if which fastq-join 2>/dev/null; then
   echo "ea-utils already installed"
-  exit 1
+  exit 0
 fi
 
 #bamtools
@@ -42,7 +42,7 @@ else
     mv trunk $MachType
   else
     echo "Can not find BamTools source trunk in $RunDir/bamtools/bamtools/branches"
-    exit 0
+    exit 1
   fi
   cd $RunDir/bamtools/bamtools/$MachType
   if [ -d $RunDir/bamtools/bamtools/$MachType/build ]; then
@@ -55,14 +55,14 @@ else
   cd $RunDir/bamtools/bamtools/$MachType
   if [ ! -s $RunDir/bamtools/bamtools/$MachType/bin/bamtools-* ]; then
     echo "Compiling BamTools failed"
-    exit 0
+    exit 1
   fi
   cd $RunDir/bamtools/bamtools/$MachType/bin
   bamtools_bin=`ls bamtools-*`
   bamtools_version=${bamtools_bin##*-}
   if [ "v$bamtools_version" = "v" ]; then
     echo "Can not guess bamtools version"
-    exit 0
+    exit 1
   fi
   cd $RunDir/bamtools/
   if [ -d $RunDir/bamtools/v$bamtools_version ]; then
@@ -89,7 +89,7 @@ fi
 cd $RunDir/eautils
 if [ ! -s ea-utils*.tar.gz ]; then
   echo "Please download the EAutils source code to $RunDir/eautils/ from website: https://code.google.com/p/ea-utils/"
-  exit 0
+  exit 1
 fi
 eautils_package=`ls ea-utils*.tar.gz`
 eautils_basename=${eautils_package%.*.*}
@@ -115,7 +115,7 @@ else
   make install > make_install.log
   if [ ! -s $RunDir/libs/sparsehash/v2.0.2/x86_64/include/sparsehash/sparse_hash_map ]; then
     echo "Compiling Sparsehash failed"
-    exit 0
+    exit 1
   fi
 
 fi
@@ -127,7 +127,7 @@ echo "Installing EA-utils..."
 PREFIX=$RunDir/eautils/v$eautils_version/$MachType make install > make.log
 if [ ! -s $RunDir/eautils/v$eautils_version/$MachType/bin/fastq-join ]; then
   echo "Compiling ea-utils failed"
-  exit 0
+  exit 1
 fi
 cd $RunDir/eautils/v$eautils_version/
 rm -rf $RunDir/eautils/v$eautils_version/sourcecode
@@ -156,3 +156,5 @@ fi
 echo "###ea-utils"
 echo "export PATH=$RunDir/eautils/v$eautils_version/$MachType/bin"':$PATH'
 echo "\n\n\n"
+
+exit 0

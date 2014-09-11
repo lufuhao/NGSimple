@@ -5,7 +5,7 @@ MachType=$(uname -m)
 
 if which fastqc 2>/dev/null; then
   echo "FastQC already installed"
-  exit 1
+  exit 0
 fi
 
 if [ ! -d $RunDir/fastqc ]; then
@@ -18,14 +18,14 @@ if [ ! -s fastqc_*.zip ]; then
 fi
 if [ ! -s fastqc_*.zip ]; then
   echo "FastQC package is not present and can not bed downloaded"
-  exit 0
+  exit 1
 fi
 fastqc_package=`ls fastqc_*.zip`
 fastqc_basename=${fastqc_package%.zip}
 fastqc_version=${fastqc_basename#fastqc_}
 if [ "v$fastqc_version" = "v" ]; then
   echo "Can not detect FastQC version"
-  exit 0
+  exit 1
 fi
 echo "FASTQC version $fastqc_version detected"
 if [ -d $RunDir/fastqc/$fastqc_version ]; then
@@ -37,14 +37,14 @@ cd $RunDir/fastqc/$fastqc_version/
 unzip $RunDir/fastqc/$fastqc_version/src/$fastqc_package >/dev/null
 if [ ! -d FastQC ]; then
   echo "Failed to un-compress $RunDir/fastqc/$fastqc_version/src/$fastqc_package"
-  exit 0
+  exit 1
 fi
 mv FastQC $MachType
 cd $RunDir/fastqc/$fastqc_version/$MachType
 echo "Installing FastQC ..."
 if [ ! -s fastqc ]; then
   echo "unzip FastQC failed"
-  exit 0
+  exit 1
 fi
 chmod 755 ./fastqc
 if [ -d $RunDir/bin ]; then
@@ -58,3 +58,5 @@ echo "Add to /etc/profile or ~/.bashrc\n\n"
 echo "###FastQC"
 echo "export PATH=$RunDir/fastqc/$fastqc_version/$MachType"':$PATH'
 echo "\n\n\n"
+
+exit 0

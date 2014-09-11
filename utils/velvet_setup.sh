@@ -9,7 +9,7 @@ MachType=$(uname -m)
 
 if which velvetg 2>/dev/null; then
   echo "velvet already installed"
-  exit 1
+  exit 0
 fi
 
 if [ -d $RunDir/velvet ]; then
@@ -46,19 +46,19 @@ else
 fi
 if [ ! -d $RunDir/velvet/version/velvet ]; then
   echo "Getting velvet source code failed. Please download latest velvet to $RunDir/velvet/ from website: https://www.ebi.ac.uk/~zerbino/velvet/"
-  exit 0
+  exit 1
 fi
 cd $RunDir/velvet/version/velvet
 make 'CATEGORIES=10' 'MAXKMERLENGTH=301' 'BIGASSEMBLY=1' 'LONGSEQUENCES=1' 'OPENMP=1'
 if [ ! -s velveth ] || [ ! -s velvetg ]; then
   echo "Compiling velvet failed"
-  exit 0
+  exit 1
 fi
 velvet_version_temp=`./velveth 2>&1 | grep 'Version'`
 velvet_version=${velvet_version_temp##* }
 if [ "v$velvet_version" = "v" ]; then
   echo "Can not get velvet version. Exit..."
-  exit 0
+  exit 1
 fi
 echo "velvet version $velvet_version dettected"
 if [ -d  $RunDir/velvet/version/$MachType ]; then 
@@ -81,3 +81,5 @@ echo "Add to /etc/profile or ~/.bashrc\n\n"
 echo "###velvet"
 echo "export PATH=$RunDir/velvet/v$velvet_version/$MachType/bin"':$PATH'
 echo "\n\n\n"
+
+exit 0

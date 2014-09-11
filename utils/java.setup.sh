@@ -6,7 +6,7 @@
 
 if which java 2>/dev/null; then
   echo "JAVA already installed"
-  exit 1
+  exit 0
 fi
 
 RunDir=$(cd `dirname $0`; pwd)
@@ -22,7 +22,7 @@ if [ -s jdk*-linux-*.tar.gz ]; then
   echo "JDK file detected: $jdkpackage"
 else
   echo "Please download JDK package to $RunDir/java/ from website http://www.oracle.com"
-  exit 0
+  exit 1
 fi
 
 jdk_basename=${jdkpackage%%.*}
@@ -56,4 +56,5 @@ echo 'export JRE_HOME=$JAVA_HOME/jre'
 echo 'export PATH=$JAVA_HOME/bin:$JRE_HOME/bin:$PATH'
 echo 'export CLASSPATH=.:$JAVA_HOME/lib:$JRE_HOME/lib:$CLASSPATH'
 echo "\n\n\n"
-exit 1
+
+exit 0
