@@ -60,7 +60,7 @@ if [ "v$velvet_version" = "v" ]; then
   echo "Can not get velvet version. Exit..."
   exit 1
 fi
-echo "velvet version $velvet_version dettected"
+echo "velvet version $velvet_version detected"
 if [ -d  $RunDir/velvet/version/$MachType ]; then 
   rm -rf $RunDir/velvet/version/$MachType
 fi
@@ -69,7 +69,7 @@ cp velvetg velveth $RunDir/velvet/version/$MachType/bin/
 cd $RunDir/velvet
 rm -rf $RunDir/velvet/version/velvet
 mv version v$velvet_version
-if [ -d $RunDir/bin ]; then
+if [ ! -d $RunDir/bin ]; then
   mkdir -p $RunDir/bin
 fi
 ln -sf $RunDir/velvet/v$velvet_version/$MachType/bin/velveth $RunDir/bin/
