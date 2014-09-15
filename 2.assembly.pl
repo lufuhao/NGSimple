@@ -12,7 +12,7 @@ SYNOPSIS
 perl $0 --config CONFIG --output_dir ./
 	
 VERSION
-	LUFUHAO20140818
+	LUFUHAO20140915
 
 DESCRIPTION
 	Assemble the simulated reads under output_dir/1.Fastq by 
@@ -105,13 +105,22 @@ GetOptions (
 
 
 ###Defaults and test###################
-our (@lib_names, @lib_types, @lib_read_lengths, @lib_covs, @lib_sizes, %RCFlib, %RCFcomb);
+our (@lib_names, @lib_types, @lib_read_lengths, @lib_covs, @lib_sizes, %RCFlib, %RCFcomb, $MaxVelvetCategories);
 $num_threads=1 unless (defined $num_threads);
 our $experence_factor=0.2;
 our $cmd='';
+$path_java='java' unless (defined $path_java);
 $path_trimmomatic="$Bin/utils/Trimmomatic/v0.32/x86_64/trimmomatic-0.32.jar" unless (defined $path_trimmomatic);
 our $quality_score_format= 'phred33' unless (defined $quality_score_format);
 die "Quality format accept \'phred33\' or \'phred64\' only\n" unless ($quality_score_format eq 'phred33' or $quality_score_format eq 'phred64');
+$test_run_stepwiseK=1 unless (defined $test_run_stepwiseK);
+$trimmo_minlen=36;
+$MaxVelvetCategories=10;
+$path_velveth='velveth' unless (defined $path_velveth);
+$path_velvetg='velvetg' unless (defined $path_velvetg);
+$path_nucmer='nucmer' unless (defined $path_nucmer);
+$path_deltafilter='delta-filter' unless (defined $path_deltafilter);
+$path_mummerplot='mummerplot' unless (defined $path_mummerplot);
 ###test output
 our $run_dir=getcwd;
 $output_dir=$run_dir unless (defined $output_dir);
@@ -122,15 +131,20 @@ else {
 	mkdir ("$output_dir", 0766) || die "Can not create the output_dir\n";
 }
 print "The simulated reads will be output to: $output_dir\n" if (defined $verbose);
-$test_run_stepwiseK=1 unless (defined $test_run_stepwiseK);
+
 ###End#################################
 
 
 
 ###Main############################
+if (-d "$output_dir/2.assembly") {
+	&DeletePath("$output_dir/2.assembly");
+}
+mkdir ("$output_dir/2.assembly", 0766) || die "Error: can not create directory:$output_dir/2.assembly\n";
 &ReadConfigureFile($config_file);
-foreach my $AAssemblyIndex (keys %RCFcomb) {
-	&SettingVelvet($AAssemblyIndex);
+foreach my $AssemblyIndex (keys %RCFcomb) {
+	print "Assembling Index: $AssemblyIndex\n";
+	&SettingVelvet($AssemblyIndex);
 }
 &AssemblySummary();
 ###End#################################
@@ -190,7 +204,7 @@ sub ReadConfigureFile {
 		}
 		if ($RCFtest_combination==1) {
 			@RCFcombination=split(/\t/, $line);
-			if (scalar(@RCFcombination)>=2 and scalar(@RCFcombination)<=11) {
+			if (scalar(@RCFcombination)>=2 and scalar(@RCFcombination)<=($MaxVelvetCategories+1)) {
 				for (my $j=0; $j<scalar(@RCFcombination)-1; $j++) {
 					die "Unknown conbination $RCFcombination[0]\n" unless (exists $RCFlib{$RCFcombination[$j+1]});
 					@{${$RCFcomb{$RCFcombination[0]}}[$j]}=@{$RCFlib{$RCFcombination[$j+1]}};
@@ -218,7 +232,7 @@ sub ReadConfigureFile {
 sub SettingVelvet {
 	my $SVindex=shift @_;
 	chdir "$output_dir" or die "Velvet error: can not cd dir $output_dir：$!\n";
-	my $newdir=$output_dir.'/2.assembly/$SVindex';
+	my $newdir="$output_dir/2.assembly/$SVindex";
 	&exec_cmd("rm -rf $newdir") if (-d $newdir);
 	mkdir ($newdir, 0766) || die "Velvet error: can not create directory $newdir\n";
 	chdir "$newdir" or die "Vetvet error: can not cd dir $newdir：$!\n";
@@ -227,7 +241,7 @@ sub SettingVelvet {
 	my $SV_num_lib=1;
 	my $SVtotal_coverage=0;
 	my $SVmin_readlength=10000;
-	for (my $SVi=0; $SVi<scalar(@{$RCFcomb{$SVi}}); $SVi++) {
+	for (my $SVi=0; $SVi<scalar(@{$RCFcomb{$SVindex}}); $SVi++) {
 		if (${${$RCFcomb{$SVindex}}[$SVi]}[0] eq 'se') {
 			my $SVfastq_file='';
 			($SVfastq_file)=&ReadFastqFiles(${${$RCFcomb{$SVindex}}[$SVi]}[0], ${${$RCFcomb{$SVindex}}[$SVi]}[3], ${${$RCFcomb{$SVindex}}[$SVi]}[2], ${${$RCFcomb{$SVindex}}[$SVi]}[1]);
@@ -255,7 +269,10 @@ sub SettingVelvet {
 	}
 	my $SVgenome_size=&fastasum($input_fasta);
 	my $SVtargetKmer=$SVtotal_coverage*$experence_factor;
+	print "\n\nReference size $SVgenome_size\nExpect K-mer:$SVtargetKmer\nAssembly fies: @SVseq_files\n";
 	my $SVguess_beskK=&GuessBestKmer($SVgenome_size, $SVtargetKmer, @SVseq_files);
+	print "Guess bast K-mer: $SVguess_beskK\n\n";
+	chdir "$newdir" or die "Vetvet error: can not cd dir $newdir：$!\n";
 	if ($test_run_stepwiseK==0) {
 		&RunVelvet($SVguess_beskK, $SVreadset);
 		link("./K$SVguess_beskK/contigs.fa", "$SVindex.K$SVguess_beskK.contigs.fa");
@@ -312,53 +329,80 @@ sub AssemblySummary {
 sub ReadFastqFiles {
 	my ($RFFtype, $RFFis, $RFFcov, $RFFrl)=@_;
 	my $RFFfile_basename="$output_dir/1.fastq/Sim.$RFFtype.$RFFis.$RFFcov.$RFFrl";
-	my @RFFfiles=glob "$RFFfile_basename*fq";
+	my $RFFnum_files=0;
 	if ($RFFtype eq 'se') {
-		die "Read fastq error: Can not detect fastq files correctly\n" unless (scalar(@RFFfiles)==1);
+		unless (-s $RFFfile_basename.'_trim.fq') {
+			&Trimmomatic($RFFfile_basename.'.fq');
+		}
+		if (-s $RFFfile_basename.'_trim.fq'){
+			return ($RFFfile_basename.'_trim.fq', 1);
+		}
 	}
 	elsif (($RFFtype eq 'pe') or ($RFFtype eq 'mp')) {
-		die "Read fastq error: Can not detect fastq files correctly\n" unless (scalar(@RFFfiles)==2);
+		unless (-s $RFFfile_basename.'_1_trim.fq' and -s $RFFfile_basename.'_2_trim.fq') {
+			unlink ($RFFfile_basename.'_1_trim.fq') if (-s $RFFfile_basename.'_1_trim.fq');
+			unlink ($RFFfile_basename.'_2_trim.fq') if (-s $RFFfile_basename.'_2_trim.fq');
+			if (-s $RFFfile_basename.'_1.fq' and -s $RFFfile_basename.'_2.fq') {
+				&Trimmomatic($RFFfile_basename.'_1.fq', $RFFfile_basename.'_2.fq', 2);
+			}else {
+				die "Can not find Fq files: $RFFfile_basename'_1.fq' and $RFFfile_basename'_2.fq'";
+			}
+			
+		}
+		if (-s $RFFfile_basename.'_1_trim.fq' and -s $RFFfile_basename.'_2_trim.fq') {
+			return ($RFFfile_basename.'_1_trim.fq', $RFFfile_basename.'_2_trim.fq')
+		}
 	}
-	else {
-		die "Read fastq error: Please do check the $output_dir/1.fastq\n";
-	}
-	foreach my $RFFfastq (@RFFfiles) {
-		die "Detected fastq file is empty: $RFFfastq\n" if (-s $RFFfastq);
-	}
-	return @RFFfiles;
+#	my @RFFfiles=glob "$RFFfile_basename*fq";
+#	if ($RFFtype eq 'se') {
+#		die "Read fastq error: Can not detect fastq files correctly\n" unless (scalar(@RFFfiles)==1);
+#	}
+#	elsif (($RFFtype eq 'pe') or ($RFFtype eq 'mp')) {
+#		die "Read fastq error: Can not detect fastq files correctly\n" unless (scalar(@RFFfiles)==2);
+#	}
+#	else {
+#		die "Read fastq error: Please do check the $output_dir/1.fastq\n";
+#	}
+#	foreach my $RFFfastq (@RFFfiles) {
+#		die "Detected fastq file is empty: $RFFfastq\n" unless (-s $RFFfastq);
+#	}
+#	return @RFFfiles;
 }
 
 
 
 ###Trimmomatic trim and clean the reads
-#&Trimmomatic(fastqR1, R2)
+#&Trimmomatic(fastqR1, R2, $num_files)
 #global varables: $output_dir, $path_java, $path_trimmomatic, $num_threads, $quality_score_format, $trimmo_minlen
 sub Trimmomatic {
-	my ($TMfastq1, $TMfastq2)=@_;
+	my ($TMfastq1, $TMfastq2, $TMnum_files)=@_;
 	print "\n\n\n###Trimmomatic BEGIN###\n";
 	chdir "$output_dir" or die "Trimmomatic error: can not cd dir $output_dir：$!\n";
 	my $newdir=$output_dir.'/1.fastq';
 	chdir "$newdir" or die "Trimmomatic error: can not cd dir $newdir：$!\n";
 	$cmd='';
-	my $TMnum_files=1;
-	die "Trimmomatic error: Can not find file: $TMfastq1\n" unless (defined $TMfastq1 and -s $TMfastq1);
-	$TMnum_files=2 if (defined $TMfastq2);
-	die "Trimmomatic error: Can not find file: $TMfastq2\n" unless (! defined $TMfastq2 and -s $TMfastq2);
+	die "Trimmomatic error: Can not find file: $TMfastq1\n" unless (-s $TMfastq1);
+	if ($TMnum_files==2) {
+		die "Trimmomatic error: Can not find file: $TMfastq2\n" unless (-s $TMfastq2);
+	}
 	my $TMfile_setting='';
 	my $TMfq1_output='';
 	my $TMfq2_output='';
 	if ($TMnum_files==2) {
-		my $TMfq1_basename=&RetrvNoExt($TMfastq1); $TMfq1_output="$output_dir'/1.fastq/'$TMfq1_basename'_trim.fq'";
-		my $TMfq2_basename=&RetrvNoExt($TMfastq2); $TMfq2_output="$output_dir'/1.fastq/'$TMfq2_basename'_trim.fq'";
+		my $TMfq1_basename=&RetrvNoExt($TMfastq1); $TMfq1_output="$output_dir/1.fastq/$TMfq1_basename"."_trim.fq";
+		my $TMfq2_basename=&RetrvNoExt($TMfastq2); $TMfq2_output="$output_dir/1.fastq/$TMfq2_basename"."_trim.fq";
 		if (-s $TMfq1_output and -s $TMfq2_output) {
 			return ($TMfq1_output, $TMfq2_output);
 		}
-		else {unlink($TMfq1_output) if (-s $TMfq1_output); unlink($TMfq2_output) if (-s $TMfq2_output);}
+		else {
+			unlink($TMfq1_output) if (-s $TMfq1_output);
+			unlink($TMfq2_output) if (-s $TMfq2_output);
+		}
 		$TMfile_setting=" $TMfastq1 $TMfastq2 $TMfq1_output $TMfq1_basename".'_unpaired.fq'." $TMfq2_output $TMfq2_basename".'unpaired.fq ';
 		$cmd="$path_java -jar $path_trimmomatic PE";
 	} elsif ($TMnum_files==1) {
 		my $TMfastq_basename=&RetrvNoExt($TMfastq1); 
-		$TMfq1_output="$output_dir'/1.fastq/'$TMfastq_basename'_trim.fq'";
+		$TMfq1_output=$output_dir.'/1.fastq/'.$TMfastq_basename.'_trim.fq';
 		if (-s $TMfq1_output) {
 			return ($TMfq1_output);
 		}
@@ -412,7 +456,7 @@ sub RunVelvet {
 	if ($RVk>0 and defined $RVreadset) {
 		$velveth_cmd=$path_velveth.' '.$RVassemblydir.' '.$RVk.' '.$RVreadset;
 		&exec_cmd($velveth_cmd);
-		$velvetg_cmd=$path_velvetg.' K'.$RVk.'-exp_cov auto -cov_cutoff auto -amos_file yes';
+		$velvetg_cmd=$path_velvetg.' '.$RVassemblydir.' -exp_cov auto -cov_cutoff auto -amos_file yes';
 		&exec_cmd($velvetg_cmd);
 	}
 	else {
@@ -640,7 +684,8 @@ sub fastasum {
 		}
 	}
 	close INPUT;
-	return ($FSnum_seq, $FStotal_length);
+#	return ($FSnum_seq, $FStotal_length);
+	return ($FStotal_length);
 }
 
 
@@ -675,7 +720,31 @@ sub exec_cmd {
 		return $return_code;
 	}
 	else {
-		print "Finished command: $cmd\nat ".&mytime()."\nRunning time:(".($end_time - $start_time)." seconds) with Returncode: $return_code\n";
+		print "\nFinished command: $cmd\nat ".&mytime()."\nRunning time:(".($end_time - $start_time)." seconds) with Returncode: $return_code\n\n";
 		return $return_code;
 	}
+}
+
+
+
+###delete path
+#my $curDir=getcwd;
+#&DeletePath(PATH);
+#chdir $curDir || die "Error when deleting directory: $curDir\n";
+sub DeletePath{
+	my $DPpath = shift @_;
+	chdir $DPpath || die "Error when deleting directory: $DPpath\n";
+	#get all the files in that directory.
+	my @DPfiles=<*>;
+	foreach(@DPfiles){
+		if(-d $_){
+		#if the destination file is a directory, go recursion.
+		&DeletePath($_);
+	}else{
+		unlink;
+	}
+	}
+	#Go up and del the destination directory.
+	chdir "../";
+	rmdir $DPpath;
 }
