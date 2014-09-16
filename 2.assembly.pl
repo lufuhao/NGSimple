@@ -142,6 +142,7 @@ if (-d "$output_dir/2.assembly") {
 }
 mkdir ("$output_dir/2.assembly", 0766) || die "Error: can not create directory:$output_dir/2.assembly\n";
 &ReadConfigureFile($config_file);
+die "Please specify your referece sequence in CONFIG file\n" unless (defined $input_fasta and $input_fasta ne '');
 foreach my $AssemblyIndex (keys %RCFcomb) {
 	print "Assembling Index: $AssemblyIndex\n";
 	&SettingVelvet($AssemblyIndex);
@@ -173,6 +174,7 @@ sub ReadConfigureFile {
 		next if (($line eq '') or $line=~m/^#|^\*/);
 		if ($RCFtest_getfasta==0 and $line=~/^\S+=(\S+)\s*/) {
 			$input_fasta=$1;
+			chomp $input_fasta;
 			$RCFtest_getfasta=1;
 		}
 		if ($line=~/\@library/i) {
@@ -269,7 +271,8 @@ sub SettingVelvet {
 	}
 	my $SVgenome_size=&fastasum($input_fasta);
 	my $SVtargetKmer=$SVtotal_coverage*$experence_factor;
-	print "\n\nReference size $SVgenome_size\nExpect K-mer:$SVtargetKmer\nAssembly fies: @SVseq_files\n";
+	print "\n\nReference size $SVgenome_size\nExpect K-mer:$SVtargetKmer\nAssembly fies: \n";
+	map {print $_."\n"} @SVseq_files;
 	my $SVguess_beskK=&GuessBestKmer($SVgenome_size, $SVtargetKmer, @SVseq_files);
 	print "Guess bast K-mer: $SVguess_beskK\n\n";
 	chdir "$newdir" or die "Vetvet error: can not cd dir $newdir：$!\n";
@@ -284,7 +287,7 @@ sub SettingVelvet {
 		my $SVrange=int($SVguess_beskK/5);
 		$SVrange+=1 if ($SVrange%2==1);
 		my $SVbestKmer=&SelectBestAssembly($SVguess_beskK-$SVrange, $SVguess_beskK+$SVrange, 4, $SVreadset);
-		my $SVbestKmer2=&SelectBestAssembly($SVbestKmer-2, $SVbestKmer=+2, 2, $SVreadset);
+		my $SVbestKmer2=&SelectBestAssembly($SVbestKmer-2, $SVbestKmer+2, 2, $SVreadset);
 		link("./K$SVbestKmer2/contigs.fa", "$SVindex.K$SVbestKmer2.contigs.fa");
 		link("./K$SVbestKmer2/longest_contig.fa", "$SVindex.K$SVbestKmer2.LongestContig.fa");
 		link("./K$SVbestKmer2/AllContigs.png", "$SVindex.K$SVbestKmer2.AllContigs.png");
@@ -463,10 +466,14 @@ sub RunVelvet {
 		print "The assembly for read set ($RVreadset) at Kmer ($RVk) failed\n";
 	}
 	chdir "./$RVassemblydir" || die "Velvet Error: can not cd dir ./$RVassemblydir：$!\n";
-	my $RVassembly_fa=glob "contigs.fa";
+	my $RVcurdir=getcwd;
+#	my $RVassembly_fa=glob "$RVcurdir/contigs.fa";
+	my $RVassembly_fa="$RVcurdir/contigs.fa";
+	die "Can not find Velvet output: $RVassembly_fa\n" unless (-s $RVassembly_fa);
 	&MumStats($input_fasta, $RVassembly_fa, 'AllContigs');
-	&ContigsStats($input_fasta, 'longest_contig.fa', 0);
-	&MumStats($input_fasta, 'longest_contig.fa', 'LongestContig');
+	&ContigsStats($RVassembly_fa, 'longest_contig.fa', 0);
+	die "Can not find longest contigs file: $RVcurdir/longest_contig.fa" unless (-s "$RVcurdir/longest_contig.fa");
+	&MumStats($input_fasta, "$RVcurdir/longest_contig.fa", 'LongestContig');
 	chdir "../" || die "Velvet Error: can not cd dir ../：$!\n";
 }
 
@@ -508,7 +515,8 @@ sub ContigsStats {
 	if ($CSoutput) {
 		unlink($CSoutput) if (-e $CSoutput);
 		open (CSOUT, ">>$CSoutput") || die "Can not write to file: $CSoutput\n";
-		print CSOUT '>'.$CSmax_id."\n".$CSmax_seq."\n";
+		print CSOUT ">$CSmax_id\n";
+		print CSOUT $CSmax_seq."\n";
 		close CSOUT;
 	}
 	elsif ($CSoptions eq 'sum' or $CSoptions eq 'stats'  or $CSoptions eq 'n50') {
@@ -571,6 +579,7 @@ sub CountNumSeqs {
 }
 
 
+
 ###select largest n50 for ./K*/contigs.fa
 #&SelectBestAssembly(min, max, step, $SVreadset)
 sub SelectBestAssembly {
@@ -578,24 +587,40 @@ sub SelectBestAssembly {
 	for (my $SBAj=$SBAminK; $SBAj<=$SBAmaxK; $SBAj+=$SBAstep) {
 		&RunVelvet($SBAj, $SBAreadset) unless (-d "./K$SBAj");
 	}
+	my $SBAcur_dir=getcwd;
 	my $SBAbestK=0;
 	my $SBAmax_n50=0;
-	my @SBAfiles=glob "./K*/contigs.fa";
-	die "Can not find any ./K*/contigs.fa velvet assemblies" unless (scalar(@SBAfiles)>0);
+	my @SBAfiles=glob "$SBAcur_dir/K*/contigs.fa";
+	die "Can not find any $SBAcur_dir/K*/contigs.fa velvet assemblies" unless (scalar(@SBAfiles)>0);
+	my @SBAKs=();
 	foreach my $SBAcontig_file (@SBAfiles) {
 		my $SBAind_n50=&ContigsStats($SBAcontig_file, 0, 'n50');
-		if ($SBAind_n50>$SBAmax_n50) {
-			if ($SBAcontig_file=~m/\/\S+\/K(\d{1,3})\//) {
-				$SBAbestK=$1;
-			}else { die "Can not find best K for velvet\n";}
+		if ($SBAcontig_file=~m/K(\d{1,3})/) {
+			my $SBAcurk=0;
+			$SBAcurk=$1;
+			push (@SBAKs, $SBAcurk);
+			if ($SBAind_n50>$SBAmax_n50) {
+				$SBAbestK=$SBAcurk;
+			}
 		}
 	}
+	@SBAKs=sort {$a<=>$b} @SBAKs;
 	if (defined $SBAbestK and $SBAbestK >0) {
-		return ($SBAbestK);
-	}else {
+		if ($SBAbestK==$SBAKs[0]) {
+			&SelectBestAssembly($SBAKs[0]-2*$SBAstep, $SBAKs[0]+$SBAstep, $SBAstep, $SBAreadset);
+		}
+		elsif ($SBAbestK==$SBAKs[-1]) {
+			&SelectBestAssembly($SBAKs[-1]-$SBAstep, $SBAKs[-1]+2*$SBAstep, $SBAstep, $SBAreadset);
+		}
+		elsif ($SBAbestK>$SBAKs[0] and $SBAbestK<$SBAKs[-1]) {
+			return $SBAbestK;
+		}else {
+			die "SelectBestAssembly error";
+		}
+	}
+	else {
 		die "Can not calcaulate best Kmer between $SBAminK - $SBAmaxK with a step $SBAstep dor read set \'$SBAreadset\'\n";
 	}
-	
 }
 
 
@@ -604,6 +629,7 @@ sub SelectBestAssembly {
 #&MumStats($ref, $fasta, $name)
 sub MumStats {
 	my ($MSref, $MSfa, $MSoutput)=@_;
+	print "\n\nMummerplot map $MSfa to $MSref, output prefix: $MSoutput";
 	my $mum_cmd="$path_nucmer -maxmatch -p=$MSoutput $MSref $MSfa";
 	&exec_cmd($mum_cmd);
 	$mum_cmd="$path_deltafilter -q $MSoutput.delta > $MSoutput.filter.q";
@@ -702,7 +728,7 @@ sub mytime {
 
 sub exec_cmd {
 	my ($cmd) = @_;
-	print &mytime()."CMD: $cmd\n";
+	print "\#" x 70 ."\n".&mytime()."CMD: $cmd\n";
 	my $start_time = time();
 	my $return_code = system($cmd);
 	my $end_time = time();
