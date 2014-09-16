@@ -240,7 +240,9 @@ sub SettingVelvet {
 	chdir "$newdir" or die "Vetvet error: can not cd dir $newdir：$!\n";
 	my @SVseq_files=();
 	my $SVreadset='';
+	my $SVvelvetg_set='';
 	my $SV_num_lib=1;
+	my $SV_num_lib2=1;
 	my $SVtotal_coverage=0;
 	my $SVmin_readlength=10000;
 	for (my $SVi=0; $SVi<scalar(@{$RCFcomb{$SVindex}}); $SVi++) {
@@ -249,6 +251,7 @@ sub SettingVelvet {
 			($SVfastq_file)=&ReadFastqFiles(${${$RCFcomb{$SVindex}}[$SVi]}[0], ${${$RCFcomb{$SVindex}}[$SVi]}[3], ${${$RCFcomb{$SVindex}}[$SVi]}[2], ${${$RCFcomb{$SVindex}}[$SVi]}[1]);
 			push (@SVseq_files, $SVfastq_file);
 			$SVreadset.=" -short -fastq $SVfastq_file";
+			$SV_num_lib2++;
 		}
 		elsif (${${$RCFcomb{$SVindex}}[$SVi]}[0] eq 'pe' or ${${$RCFcomb{$SVindex}}[$SVi]}[0] eq 'mp') {
 			my ($SVfastq_R1, $SVfastq_R2)=('', '');
@@ -257,11 +260,13 @@ sub SettingVelvet {
 			push (@SVseq_files, $SVfastq_R2);
 			if ($SV_num_lib==1) {
 				$SVreadset.=" -shortPaired -fastq -separate $SVfastq_R1 $SVfastq_R2 ";
+				$SVvelvetg_set.=" -ins_length ${${$RCFcomb{$SVindex}}[$SVi]}[3] -ins_length_sd ". ${${$RCFcomb{$SVindex}}[$SVi]}[3]/5 . ' ';
 			}
 			else {
 				$SVreadset.=" -shortPaired$SV_num_lib -fastq -separate $SVfastq_R1 $SVfastq_R2 ";
+				$SVvelvetg_set.=" -ins_length$SV_num_lib2 ${${$RCFcomb{$SVindex}}[$SVi]}[3] -ins_length_sd ". int(${${$RCFcomb{$SVindex}}[$SVi]}[3]/5) . ' ';
 			}
-			$SV_num_lib++;
+			$SV_num_lib++; $SV_num_lib2++;
 		}
 		else {
 			die "Unknown libary type: ${${$RCFcomb{$SVindex}}[$SVi]}[0]\n";
@@ -277,7 +282,7 @@ sub SettingVelvet {
 	print "Guess bast K-mer: $SVguess_beskK\n\n";
 	chdir "$newdir" or die "Vetvet error: can not cd dir $newdir：$!\n";
 	if ($test_run_stepwiseK==0) {
-		&RunVelvet($SVguess_beskK, $SVreadset);
+		&RunVelvet($SVguess_beskK, $SVreadset, $SVvelvetg_set);
 		link("./K$SVguess_beskK/contigs.fa", "$SVindex.K$SVguess_beskK.contigs.fa");
 		link("./K$SVguess_beskK/longest_contig.fa", "$SVindex.K$SVguess_beskK.LongestContig.fa");
 		link("./K$SVguess_beskK/AllContigs.png", "$SVindex.K$SVguess_beskK.AllContigs.png");
@@ -286,12 +291,13 @@ sub SettingVelvet {
 	else {
 		my $SVrange=int($SVguess_beskK/5);
 		$SVrange+=1 if ($SVrange%2==1);
-		my $SVbestKmer=&SelectBestAssembly($SVguess_beskK-$SVrange, $SVguess_beskK+$SVrange, 4, $SVreadset);
-		my $SVbestKmer2=&SelectBestAssembly($SVbestKmer-2, $SVbestKmer+2, 2, $SVreadset);
-		link("./K$SVbestKmer2/contigs.fa", "$SVindex.K$SVbestKmer2.contigs.fa");
-		link("./K$SVbestKmer2/longest_contig.fa", "$SVindex.K$SVbestKmer2.LongestContig.fa");
-		link("./K$SVbestKmer2/AllContigs.png", "$SVindex.K$SVbestKmer2.AllContigs.png");
-		link("./K$SVbestKmer2/LongestContig.png", "$SVindex.K$SVbestKmer2.LongestContig.png");
+		my $SVbestKmer=&SelectBestAssembly($SVguess_beskK-$SVrange, $SVguess_beskK+$SVrange, 8, $SVreadset, $SVvelvetg_set);
+		my $SVbestKmer2=&SelectBestAssembly($SVbestKmer-4, $SVbestKmer+4, 4, $SVreadset, $SVvelvetg_set);
+		my $SVbestKmer3=&SelectBestAssembly($SVbestKmer-2, $SVbestKmer+2, 2, $SVreadset, $SVvelvetg_set);
+		link("./K$SVbestKmer3/contigs.fa", "$SVindex.K$SVbestKmer3.contigs.fa");
+		link("./K$SVbestKmer3/longest_contig.fa", "$SVindex.K$SVbestKmer3.LongestContig.fa");
+		link("./K$SVbestKmer3/AllContigs.png", "$SVindex.K$SVbestKmer3.AllContigs.png");
+		link("./K$SVbestKmer3/LongestContig.png", "$SVindex.K$SVbestKmer3.LongestContig.png");
 	
 	}
 	chdir "$output_dir" or die "Velvet error: can not cd dir $output_dir：$!\n";
@@ -449,17 +455,17 @@ sub RetrvNoExt {
 
 
 ###RunVelvet
-#&RunVelvet($k, $readset)
+#&RunVelvet($k, $readset, $velvetg_set)
 #global variables: $path_velveth, $path_velvetg
 sub RunVelvet {
-	my ($RVk, $RVreadset)=@_;
+	my ($RVk, $RVreadset, $RVvelvetg_set)=@_;
 	my $velveth_cmd='';
 	my $velvetg_cmd='';
 	my $RVassemblydir='K'.$RVk;
 	if ($RVk>0 and defined $RVreadset) {
 		$velveth_cmd=$path_velveth.' '.$RVassemblydir.' '.$RVk.' '.$RVreadset;
 		&exec_cmd($velveth_cmd);
-		$velvetg_cmd=$path_velvetg.' '.$RVassemblydir.' -exp_cov auto -cov_cutoff auto -amos_file yes';
+		$velvetg_cmd=$path_velvetg.' '.$RVassemblydir.' -exp_cov auto -cov_cutoff auto -amos_file yes'.' '.$RVvelvetg_set;
 		&exec_cmd($velvetg_cmd);
 	}
 	else {
@@ -581,11 +587,11 @@ sub CountNumSeqs {
 
 
 ###select largest n50 for ./K*/contigs.fa
-#&SelectBestAssembly(min, max, step, $SVreadset)
+#&SelectBestAssembly(min, max, step, $SVreadset, $SVvelvetg_set)
 sub SelectBestAssembly {
-	my ($SBAminK, $SBAmaxK, $SBAstep, $SBAreadset)=@_;
+	my ($SBAminK, $SBAmaxK, $SBAstep, $SBAreadset, $SBAvelvetg_set)=@_;
 	for (my $SBAj=$SBAminK; $SBAj<=$SBAmaxK; $SBAj+=$SBAstep) {
-		&RunVelvet($SBAj, $SBAreadset) unless (-d "./K$SBAj");
+		&RunVelvet($SBAj, $SBAreadset, $SBAvelvetg_set) unless (-d "./K$SBAj");
 	}
 	my $SBAcur_dir=getcwd;
 	my $SBAbestK=0;
@@ -629,7 +635,7 @@ sub SelectBestAssembly {
 #&MumStats($ref, $fasta, $name)
 sub MumStats {
 	my ($MSref, $MSfa, $MSoutput)=@_;
-	print "\n\nMummerplot map $MSfa to $MSref, output prefix: $MSoutput";
+	print "\n\nMummerplot map $MSfa to $MSref, output prefix: $MSoutput\n";
 	my $mum_cmd="$path_nucmer -maxmatch -p=$MSoutput $MSref $MSfa";
 	&exec_cmd($mum_cmd);
 	$mum_cmd="$path_deltafilter -q $MSoutput.delta > $MSoutput.filter.q";
