@@ -463,9 +463,9 @@ sub RunVelvet {
 	my $velvetg_cmd='';
 	my $RVassemblydir='K'.$RVk;
 	if ($RVk>0 and defined $RVreadset) {
-		$velveth_cmd=$path_velveth.' '.$RVassemblydir.' '.$RVk.' '.$RVreadset;
+		$velveth_cmd=$path_velveth.' '.$RVassemblydir.' '.$RVk.' '.$RVreadset.' > velveth.log';
 		&exec_cmd($velveth_cmd);
-		$velvetg_cmd=$path_velvetg.' '.$RVassemblydir.' -exp_cov auto -cov_cutoff auto -amos_file yes'.' '.$RVvelvetg_set;
+		$velvetg_cmd=$path_velvetg.' '.$RVassemblydir.' -exp_cov auto -cov_cutoff auto -amos_file yes'.' '.$RVvelvetg_set.' > velvetg.log';
 		&exec_cmd($velvetg_cmd);
 	}
 	else {
@@ -604,10 +604,14 @@ sub SelectBestAssembly {
 		if ($SBAcontig_file=~m/K(\d{1,3})/) {
 			my $SBAcurk=0;
 			$SBAcurk=$1;
+			print "K$SBAcurk n50: $SBAind_n50\n";
+			print "K$SBAcurk stats: ". join("\t", &ContigsStats($SBAcontig_file, 0, 'stats')) ."\n";
 			push (@SBAKs, $SBAcurk);
 			if ($SBAind_n50>$SBAmax_n50) {
+				$SBAmax_n50=$SBAind_n50;
 				$SBAbestK=$SBAcurk;
 			}
+			print "BestK: $SBAbestK\n";
 		}
 	}
 	@SBAKs=sort {$a<=>$b} @SBAKs;
@@ -620,8 +624,9 @@ sub SelectBestAssembly {
 		}
 		elsif ($SBAbestK>$SBAKs[0] and $SBAbestK<$SBAKs[-1]) {
 			return $SBAbestK;
-		}else {
-			die "SelectBestAssembly error";
+		}
+		else {
+			die "SelectBestAssembly error\n";
 		}
 	}
 	else {
