@@ -107,7 +107,7 @@ GetOptions (
 ###Defaults and test###################
 our (@lib_names, @lib_types, @lib_read_lengths, @lib_covs, @lib_sizes, %RCFlib, %RCFcomb, $MaxVelvetCategories);
 $num_threads=1 unless (defined $num_threads);
-our $experence_factor=0.2;
+our $experence_factor=0.3;
 our $cmd='';
 $path_java='java' unless (defined $path_java);
 $path_trimmomatic="$Bin/utils/Trimmomatic/v0.32/x86_64/trimmomatic-0.32.jar" unless (defined $path_trimmomatic);
@@ -264,7 +264,7 @@ sub SettingVelvet {
 			}
 			else {
 				$SVreadset.=" -shortPaired$SV_num_lib -fastq -separate $SVfastq_R1 $SVfastq_R2 ";
-				$SVvelvetg_set.=" -ins_length$SV_num_lib2 ${${$RCFcomb{$SVindex}}[$SVi]}[3] -ins_length_sd ". int(${${$RCFcomb{$SVindex}}[$SVi]}[3]/5) . ' ';
+				$SVvelvetg_set.=" -ins_length$SV_num_lib2 ${${$RCFcomb{$SVindex}}[$SVi]}[3] -ins_length$SV_num_lib2".'_sd '. int(${${$RCFcomb{$SVindex}}[$SVi]}[3]/5) . ' ';
 			}
 			$SV_num_lib++; $SV_num_lib2++;
 		}
@@ -316,6 +316,7 @@ sub AssemblySummary {
 	chdir "$newdir" or die "Summary error: can not cd dir $newdir：$!\n";
 	my @AScontig_files=glob "$output_dir/2.assembly/*/*contigs.fa";
 	die "Summary error: Can not find $output_dir/2.assembly/*/*contigs.fa" unless (@AScontig_files);
+	unlink ("FinalStats.txt") if (-e "FinalStats.txt");
 	open (STATS, ">>FinalStats.txt") || die "Summary error: can not write to file: $output_dir'/3.summary/FinalStats.txt'";
 	foreach my $ASindex (keys %RCFcomb) {
 		my $ASnum_libs=scalar(@{$RCFcomb{$ASindex}});
@@ -324,9 +325,8 @@ sub AssemblySummary {
 			print STATS "\t@{${$RCFcomb{$ASindex}}[$i]}\n";
 		}
 	}
-	
 	foreach my $AScontigs (@AScontig_files) {
-		print STATS &ContigsStats($AScontigs, 0, 'stats'), "\n";
+		print STATS join("\t", &ContigsStats($AScontigs, 0, 'stats')),"\n";
 	}
 	&exec_cmd("cp $output_dir/2.assembly/*/*.png ./");
 	chdir "$output_dir" or die "Summary error: can not cd dir $output_dir：$!\n";
