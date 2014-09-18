@@ -305,33 +305,6 @@ sub SettingVelvet {
 
 
 
-###Step3 summarize the contigs
-#&AssemblySummary()
-#global variables: 
-sub AssemblySummary {
-	chdir "$output_dir" or die "Summary error: can not cd dir $output_dir：$!\n";
-	my $newdir=$output_dir.'/3.summary';
-	&exec_cmd("rm -rf $newdir") if (-d $newdir);
-	mkdir ($newdir, 0766) || die "Summary error: can not create directory $newdir\n";
-	chdir "$newdir" or die "Summary error: can not cd dir $newdir：$!\n";
-	my @AScontig_files=glob "$output_dir/2.assembly/*/*contigs.fa";
-	die "Summary error: Can not find $output_dir/2.assembly/*/*contigs.fa" unless (@AScontig_files);
-	unlink ("FinalStats.txt") if (-e "FinalStats.txt");
-	open (STATS, ">>FinalStats.txt") || die "Summary error: can not write to file: $output_dir'/3.summary/FinalStats.txt'";
-	foreach my $ASindex (keys %RCFcomb) {
-		my $ASnum_libs=scalar(@{$RCFcomb{$ASindex}});
-		print STATS "Index $ASindex Accepted: \n";
-		for (my $i=0; $i<$ASnum_libs; $i++) {
-			print STATS "\t@{${$RCFcomb{$ASindex}}[$i]}\n";
-		}
-	}
-	foreach my $AScontigs (@AScontig_files) {
-		print STATS join("\t", &ContigsStats($AScontigs, 0, 'stats')),"\n";
-	}
-	&exec_cmd("cp $output_dir/2.assembly/*/*.png ./");
-	chdir "$output_dir" or die "Summary error: can not cd dir $output_dir：$!\n";
-}
-
 ###ReadFastqFiles according to the setting
 #&ReadFastqFiles($lib_type, $lib_insertsize, $coverage, $read_length)
 #global variables: $output_dir
@@ -441,15 +414,99 @@ sub Trimmomatic {
 
 
 
-###Get (path and extesion name)-removed fileID
-#&RetrvNoExt(file)
-sub RetrvNoExt {
-	my $RNE_ori=shift @_;
-	chomp $RNE_ori;
-	my ($RNE_new, $RNE_base)=('', '');
-	($RNE_base=$RNE_ori)=~ s/.*\///s; 
-	($RNE_new=$RNE_base)=~s/^(.*)\.\w+$/$1/;
-	return $RNE_new;
+###GuessKmer for fastq file
+#&GuessBestKmer($Genome_size, $Target_kmer, @fastq_files)
+sub GuessBestKmer {
+	print "Guessing Kmer...\n";
+	my ($GBKgenome_size, $GBK_targetKmer, @GBKseq_files)=@_;
+	my %kmer_count=();
+	foreach my $GBKseq_ind_file (@GBKseq_files) {
+		open (INPUT, $GBKseq_ind_file) || die "Can not find file: $GBKseq_ind_file\n";
+		while (my $line=<INPUT>) {
+			chomp $line;
+			if ($line=~m/^>/) {
+				$line=<INPUT>;
+				chomp $line;
+				$kmer_count{length($line)}++;
+			}
+			if ($line=~m/^@/) {
+				$line=<INPUT>;
+				chomp $line;
+				$kmer_count{length($line)}++;
+				<INPUT>;<INPUT>;
+			}
+		}
+		close INPUT;
+	}
+	my @GBKread_length=sort {$a<=>$b} keys %kmer_count;
+	die "Can not find any read\n" if (scalar(@GBKread_length)<1);
+	my $GBKbest_kmer_cov=0;
+	my $GBKbestK=0;
+	print "K\tNum_kmers\tKmer_cov\tExp_Kmer_cov\n" if (defined $verbose);
+	for (my $i=1; $i<=$GBKread_length[-1]; $i+=2) {
+		my $num_kmers=0;
+		foreach my $GBKkmer (@GBKread_length) {
+			next if ($GBKkmer<$i);
+			$num_kmers+=($GBKkmer-$i+1)*$kmer_count{$GBKkmer};
+		}
+		my $GBKKmer_cov=$num_kmers/$GBKgenome_size;
+		if (abs($GBKKmer_cov-$GBK_targetKmer)<abs($GBKbest_kmer_cov-$GBK_targetKmer)) {
+			$GBKbest_kmer_cov=$GBKKmer_cov;
+			$GBKbestK=$i;
+		}
+		print "$i\t$num_kmers\t$GBKKmer_cov\t$GBK_targetKmer\n" if (defined $verbose);
+	}
+	($GBKbestK>1) ? (return $GBKbestK) : (return 0);
+}
+
+
+
+###select largest n50 for ./K*/contigs.fa
+#&SelectBestAssembly(min, max, step, $SVreadset, $SVvelvetg_set)
+sub SelectBestAssembly {
+	my ($SBAminK, $SBAmaxK, $SBAstep, $SBAreadset, $SBAvelvetg_set)=@_;
+	for (my $SBAj=$SBAminK; $SBAj<=$SBAmaxK; $SBAj+=$SBAstep) {
+		&RunVelvet($SBAj, $SBAreadset, $SBAvelvetg_set) unless (-d "./K$SBAj");
+	}
+	my $SBAcur_dir=getcwd;
+	my $SBAbestK=0;
+	my $SBAmax_n50=0;
+	my @SBAfiles=glob "$SBAcur_dir/K*/contigs.fa";
+	die "Can not find any $SBAcur_dir/K*/contigs.fa velvet assemblies" unless (scalar(@SBAfiles)>0);
+	my @SBAKs=();
+	foreach my $SBAcontig_file (@SBAfiles) {
+		my $SBAind_n50=&ContigsStats($SBAcontig_file, 0, 'n50');
+		if ($SBAcontig_file=~m/K(\d{1,3})/) {
+			my $SBAcurk=0;
+			$SBAcurk=$1;
+			print "K$SBAcurk n50: $SBAind_n50\n";
+			print "K$SBAcurk stats: ". join("\t", &ContigsStats($SBAcontig_file, 0, 'stats')) ."\n";
+			push (@SBAKs, $SBAcurk);
+			if ($SBAind_n50>$SBAmax_n50) {
+				$SBAmax_n50=$SBAind_n50;
+				$SBAbestK=$SBAcurk;
+			}
+			print "BestK selected: $SBAbestK\n";
+		}
+	}
+	@SBAKs=sort {$a<=>$b} @SBAKs;
+	if (defined $SBAbestK and $SBAbestK >0) {
+		if ($SBAbestK==$SBAKs[0]) {
+			&SelectBestAssembly($SBAKs[0]-2*$SBAstep, $SBAKs[0]+$SBAstep, $SBAstep, $SBAreadset);
+		}
+		elsif ($SBAbestK==$SBAKs[-1]) {
+			&SelectBestAssembly($SBAKs[-1]-$SBAstep, $SBAKs[-1]+2*$SBAstep, $SBAstep, $SBAreadset);
+		}
+		elsif ($SBAbestK>$SBAKs[0] and $SBAbestK<$SBAKs[-1]) {
+			return $SBAbestK;
+		}
+		else {
+			die "SelectBestAssembly error\n";
+		}
+	}
+	else {
+		die "Can not calcaulate best Kmer between $SBAminK - $SBAmaxK with a step $SBAstep dor read set \'$SBAreadset\'\n";
+	}
 }
 
 
@@ -463,9 +520,9 @@ sub RunVelvet {
 	my $velvetg_cmd='';
 	my $RVassemblydir='K'.$RVk;
 	if ($RVk>0 and defined $RVreadset) {
-		$velveth_cmd=$path_velveth.' '.$RVassemblydir.' '.$RVk.' '.$RVreadset.' > velveth.log';
+		$velveth_cmd=$path_velveth.' '.$RVassemblydir.' '.$RVk.' '.$RVreadset.' >> velveth.log';
 		&exec_cmd($velveth_cmd);
-		$velvetg_cmd=$path_velvetg.' '.$RVassemblydir.' -exp_cov auto -cov_cutoff auto -amos_file yes'.' '.$RVvelvetg_set.' > velvetg.log';
+		$velvetg_cmd=$path_velvetg.' '.$RVassemblydir.' -exp_cov auto -cov_cutoff auto -amos_file yes'.' '.$RVvelvetg_set.' >> velvetg.log';
 		&exec_cmd($velvetg_cmd);
 	}
 	else {
@@ -481,6 +538,21 @@ sub RunVelvet {
 	die "Can not find longest contigs file: $RVcurdir/longest_contig.fa" unless (-s "$RVcurdir/longest_contig.fa");
 	&MumStats($input_fasta, "$RVcurdir/longest_contig.fa", 'LongestContig');
 	chdir "../" || die "Velvet Error: can not cd dir ../：$!\n";
+}
+
+
+
+###MumStats plot fasta to reference
+#&MumStats($ref, $fasta, $name)
+sub MumStats {
+	my ($MSref, $MSfa, $MSoutput)=@_;
+	print "\n\nMummerplot map $MSfa to $MSref, output prefix: $MSoutput\n";
+	my $mum_cmd="$path_nucmer -maxmatch -p=$MSoutput $MSref $MSfa";
+	&exec_cmd($mum_cmd);
+	$mum_cmd="$path_deltafilter -q $MSoutput.delta > $MSoutput.filter.q";
+	&exec_cmd($mum_cmd);
+	$mum_cmd="$path_mummerplot --large --layout -p=$MSoutput --png $MSoutput.filter.q ";
+	&exec_cmd($mum_cmd);
 }
 
 
@@ -586,116 +658,33 @@ sub CountNumSeqs {
 
 
 
-###select largest n50 for ./K*/contigs.fa
-#&SelectBestAssembly(min, max, step, $SVreadset, $SVvelvetg_set)
-sub SelectBestAssembly {
-	my ($SBAminK, $SBAmaxK, $SBAstep, $SBAreadset, $SBAvelvetg_set)=@_;
-	for (my $SBAj=$SBAminK; $SBAj<=$SBAmaxK; $SBAj+=$SBAstep) {
-		&RunVelvet($SBAj, $SBAreadset, $SBAvelvetg_set) unless (-d "./K$SBAj");
-	}
-	my $SBAcur_dir=getcwd;
-	my $SBAbestK=0;
-	my $SBAmax_n50=0;
-	my @SBAfiles=glob "$SBAcur_dir/K*/contigs.fa";
-	die "Can not find any $SBAcur_dir/K*/contigs.fa velvet assemblies" unless (scalar(@SBAfiles)>0);
-	my @SBAKs=();
-	foreach my $SBAcontig_file (@SBAfiles) {
-		my $SBAind_n50=&ContigsStats($SBAcontig_file, 0, 'n50');
-		if ($SBAcontig_file=~m/K(\d{1,3})/) {
-			my $SBAcurk=0;
-			$SBAcurk=$1;
-			print "K$SBAcurk n50: $SBAind_n50\n";
-			print "K$SBAcurk stats: ". join("\t", &ContigsStats($SBAcontig_file, 0, 'stats')) ."\n";
-			push (@SBAKs, $SBAcurk);
-			if ($SBAind_n50>$SBAmax_n50) {
-				$SBAmax_n50=$SBAind_n50;
-				$SBAbestK=$SBAcurk;
-			}
-			print "BestK: $SBAbestK\n";
+###Step3 summarize the contigs
+#&AssemblySummary()
+#global variables: 
+sub AssemblySummary {
+	chdir "$output_dir" or die "Summary error: can not cd dir $output_dir：$!\n";
+	my $newdir=$output_dir.'/3.summary';
+	&exec_cmd("rm -rf $newdir") if (-d $newdir);
+	mkdir ($newdir, 0766) || die "Summary error: can not create directory $newdir\n";
+	chdir "$newdir" or die "Summary error: can not cd dir $newdir：$!\n";
+	my @AScontig_files=glob "$output_dir/2.assembly/*/*contigs.fa";
+	die "Summary error: Can not find $output_dir/2.assembly/*/*contigs.fa" unless (@AScontig_files);
+	unlink ("FinalStats.txt") if (-e "FinalStats.txt");
+	open (STATS, ">>FinalStats.txt") || die "Summary error: can not write to file: $output_dir'/3.summary/FinalStats.txt'";
+	foreach my $ASindex (keys %RCFcomb) {
+		my $ASnum_libs=scalar(@{$RCFcomb{$ASindex}});
+		print STATS "Index $ASindex Accepted: \n";
+		for (my $i=0; $i<$ASnum_libs; $i++) {
+			print STATS "\t@{${$RCFcomb{$ASindex}}[$i]}\n";
 		}
 	}
-	@SBAKs=sort {$a<=>$b} @SBAKs;
-	if (defined $SBAbestK and $SBAbestK >0) {
-		if ($SBAbestK==$SBAKs[0]) {
-			&SelectBestAssembly($SBAKs[0]-2*$SBAstep, $SBAKs[0]+$SBAstep, $SBAstep, $SBAreadset);
-		}
-		elsif ($SBAbestK==$SBAKs[-1]) {
-			&SelectBestAssembly($SBAKs[-1]-$SBAstep, $SBAKs[-1]+2*$SBAstep, $SBAstep, $SBAreadset);
-		}
-		elsif ($SBAbestK>$SBAKs[0] and $SBAbestK<$SBAKs[-1]) {
-			return $SBAbestK;
-		}
-		else {
-			die "SelectBestAssembly error\n";
-		}
+	print "\nNum_bp\tNum_seqs\tNum>200\tNum>500\tNum>n50\tn10\tn20\tn30\tn40\tn50\tn60\tn70\tn80\tn90\tmax\tmax_id\tFile\n";
+	foreach my $AScontigs (@AScontig_files) {
+		print STATS join("\t", &ContigsStats($AScontigs, 0, 'stats')),"\n";
 	}
-	else {
-		die "Can not calcaulate best Kmer between $SBAminK - $SBAmaxK with a step $SBAstep dor read set \'$SBAreadset\'\n";
-	}
+	&exec_cmd("cp $output_dir/2.assembly/*/*.png ./");
+	chdir "$output_dir" or die "Summary error: can not cd dir $output_dir：$!\n";
 }
-
-
-
-###MumStats plot fasta to reference
-#&MumStats($ref, $fasta, $name)
-sub MumStats {
-	my ($MSref, $MSfa, $MSoutput)=@_;
-	print "\n\nMummerplot map $MSfa to $MSref, output prefix: $MSoutput\n";
-	my $mum_cmd="$path_nucmer -maxmatch -p=$MSoutput $MSref $MSfa";
-	&exec_cmd($mum_cmd);
-	$mum_cmd="$path_deltafilter -q $MSoutput.delta > $MSoutput.filter.q";
-	&exec_cmd($mum_cmd);
-	$mum_cmd="$path_mummerplot --large --layout -p=$MSoutput --png $MSoutput.filter.q ";
-	&exec_cmd($mum_cmd);
-}
-
-
-
-###GuessKmer for fastq file
-#&GuessBestKmer($Genome_size, $Target_kmer, @fastq_files)
-sub GuessBestKmer {
-	print "Guessing Kmer...\n";
-	my ($GBKgenome_size, $GBK_targetKmer, @GBKseq_files)=@_;
-	my %kmer_count=();
-	foreach my $GBKseq_ind_file (@GBKseq_files) {
-		open (INPUT, $GBKseq_ind_file) || die "Can not find file: $GBKseq_ind_file\n";
-		while (my $line=<INPUT>) {
-			chomp $line;
-			if ($line=~m/^>/) {
-				$line=<INPUT>;
-				chomp $line;
-				$kmer_count{length($line)}++;
-			}
-			if ($line=~m/^@/) {
-				$line=<INPUT>;
-				chomp $line;
-				$kmer_count{length($line)}++;
-				<INPUT>;<INPUT>;
-			}
-		}
-		close INPUT;
-	}
-	my @GBKread_length=sort {$a<=>$b} keys %kmer_count;
-	die "Can not find any read\n" if (scalar(@GBKread_length)<1);
-	my $GBKbest_kmer_cov=0;
-	my $GBKbestK=0;
-	print "K\tNum_kmers\tKmer_cov\tExp_Kmer_cov\n" if (defined $verbose);
-	for (my $i=1; $i<=$GBKread_length[-1]; $i+=2) {
-		my $num_kmers=0;
-		foreach my $GBKkmer (@GBKread_length) {
-			next if ($GBKkmer<$i);
-			$num_kmers+=($GBKkmer-$i+1)*$kmer_count{$GBKkmer};
-		}
-		my $GBKKmer_cov=$num_kmers/$GBKgenome_size;
-		if (abs($GBKKmer_cov-$GBK_targetKmer)<abs($GBKbest_kmer_cov-$GBK_targetKmer)) {
-			$GBKbest_kmer_cov=$GBKKmer_cov;
-			$GBKbestK=$i;
-		}
-		print "$i\t$num_kmers\t$GBKKmer_cov\t$GBK_targetKmer\n" if (defined $verbose);
-	}
-	($GBKbestK>1) ? (return $GBKbestK) : (return 0);
-}
-
 
 
 
@@ -723,6 +712,19 @@ sub fastasum {
 	close INPUT;
 #	return ($FSnum_seq, $FStotal_length);
 	return ($FStotal_length);
+}
+
+
+
+###Get (path and extesion name)-removed fileID
+#&RetrvNoExt(file)
+sub RetrvNoExt {
+	my $RNE_ori=shift @_;
+	chomp $RNE_ori;
+	my ($RNE_new, $RNE_base)=('', '');
+	($RNE_base=$RNE_ori)=~ s/.*\///s; 
+	($RNE_new=$RNE_base)=~s/^(.*)\.\w+$/$1/;
+	return $RNE_new;
 }
 
 
