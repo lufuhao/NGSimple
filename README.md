@@ -109,6 +109,18 @@ Assem3
 
 3.2 Running NGSimple
 	bash$ ngsimple -i CONFIG -t 5
+	
+NOTE: Since Velvet is extremely memory-consuming, it is highly recommended 
+that users estimate how much memory will be needed by velvetg before 
+submitting their jobs. The estimation may be calcuated using the following 
+formula:
+Required RAM (MB) = (-109635 + 18977*ReadSize + 86326*GenomeSize + 233353*NumReads - 51092*K)/1024
+  Read size is in bases.
+  Genome size is in millions of bases (Mb)
+  Number of reads is in millions
+  K is the kmer hash value used in velveth
+From: http://seqanswers.com/forums/showthread.php?t=2101
+
 
 3.3 Determine insert size distribution (NOT using Picard CollectInsertSizeMetrics.jar)
 	bash$ 3.insertsize.pl --help
