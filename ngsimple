@@ -9,7 +9,7 @@ cat<<HELP
 
 ngsimple --- NGS sIMulation PipeLinE
 
-Version: 20140904
+Version: 20140915
 
 Descriptions:
 Simulate Illumina reads from reference sequences with customized 
