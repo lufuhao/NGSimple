@@ -3,9 +3,11 @@
 RunDir=$(cd `dirname $0`; pwd)
 MachType=$(uname -m)
 
-if which bwa 2>/dev/null; then
-  echo "BWA already installed"
-  exit 0
+if which bwa >/dev/null; then
+  echo "BWA fund installed"`which bwa`
+else
+  echo "BWA NOT found"
+  exit 1
 fi
 
 if [ ! -d $RunDir/bwa ]; then
