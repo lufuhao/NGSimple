@@ -9,7 +9,7 @@ cat<<HELP
 
 ngsimple --- NGS sIMulation PipeLinE
 
-Version: 20140915
+Version: 20140919
 
 Descriptions:
 Simulate Illumina reads from reference sequences with customized 
@@ -40,7 +40,7 @@ exit 0
 #################### Defaults #######################################
 echo -e "\n######################\nNGSimple initializing ...\n######################\n"
 echo "Adding $RunDir/bin into PATH"
-export PATH=$RunDir/bin:$PATH
+export PATH=$RunDir/bin:$RunDir/utils/bin:$PATH
 
 ###Defaults
 opt_s=0
