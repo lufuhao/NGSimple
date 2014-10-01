@@ -13,7 +13,7 @@
 #yum install sparsehash sparsehash-devel
 #yum install gsl gsl-devel
 #?
-RunDir=$(cd `dirname $0`; pwd)
+RunDir=$(cd `dirname $(readlink -f $0)`; pwd)
 MachType=$(uname -m)
 
 if which fastq-join 2>/dev/null; then

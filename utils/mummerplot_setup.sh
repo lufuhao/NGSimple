@@ -5,7 +5,7 @@
 #apt-get install tcsh xfig gnuplot
 ###YUM
 #yum install tcsh xfig gnuplot
-RunDir=$(cd `dirname $0`; pwd)
+RunDir=$(cd `dirname $(readlink -f $0)`; pwd)
 MachType=$(uname -m)
 
 if which mummerplot 2>/dev/null; then

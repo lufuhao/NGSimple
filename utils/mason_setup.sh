@@ -31,7 +31,7 @@ if which mason 2>/dev/null; then
   exit 0
 fi
 
-RunDir=$(cd `dirname $0`; pwd)
+RunDir=$(cd `dirname $(readlink -f $0)`; pwd)
 MachType=$(uname -m)
 if [ -d $RunDir/mason ]; then
   echo "Dir exists: $RunDir/mason"

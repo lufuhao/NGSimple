@@ -8,7 +8,7 @@
 #YUM
 #yum install pkgconfig gcc gcc-c++ wget gnuplot
 #yum install gd gd-devel php-gd perl-YAML
-RunDir=$(cd `dirname $0`; pwd)
+RunDir=$(cd `dirname $(readlink -f $0)`; pwd)
 MachType=$(uname -m)
 
 if which fastx_reverse_complement 2>/dev/null; then

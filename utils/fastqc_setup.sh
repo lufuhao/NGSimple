@@ -1,6 +1,6 @@
 #!/bin/sh
 #Require: JAVA (>1.6.0), unzip
-RunDir=$(cd `dirname $0`; pwd)
+RunDir=$(cd `dirname $(readlink -f $0)`; pwd)
 MachType=$(uname -m)
 
 if which fastqc 2>/dev/null; then

@@ -1,6 +1,6 @@
 #!/bin/sh
 #Require zlib
-RunDir=$(cd `dirname $0`; pwd)
+RunDir=$(cd `dirname $(readlink -f $0)`; pwd)
 MachType=$(uname -m)
 
 if which bwa >/dev/null; then

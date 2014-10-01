@@ -4,7 +4,7 @@
 #apt-get install python-dev cython
 ###YUM
 #yum install python-devel cython
-RunDir=$(cd `dirname $0`; pwd)
+RunDir=$(cd `dirname $(readlink -f $0)`; pwd)
 MachType=$(uname -m)
 
 if which cutadapt 2>/dev/null; then

@@ -4,7 +4,7 @@
 #apt-get install libopenmpi1.6 libopenmpi-dev openmpi-bin openmpi-common
 ###YUM
 #yum install openmpi openmpi-devel
-RunDir=$(cd `dirname $0`; pwd)
+RunDir=$(cd `dirname $(readlink -f $0)`; pwd)
 MachType=$(uname -m)
 
 if which velvetg 2>/dev/null; then

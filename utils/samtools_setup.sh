@@ -6,7 +6,7 @@
 #YUM
 #yum install zlib zlib-devel
 #yum install ncurses ncurses-devel
-RunDir=$(cd `dirname $0`; pwd)
+RunDir=$(cd `dirname $(readlink -f $0)`; pwd)
 MachType=$(uname -m)
 
 if [ ! -d $RunDir/samtools ]; then
