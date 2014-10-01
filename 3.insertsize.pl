@@ -1,8 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Bio::Seq;
-use Bio::SeqIO;
+use Getopt::Long;
 use Cwd;
 use FindBin qw($Bin);
 use constant USAGE=><<EOH;
@@ -10,12 +9,15 @@ use constant USAGE=><<EOH;
 SYNOPSIS:
 
 perl $0 --input my.fa [Options]
-Version: LUFUHAO20140908
+Version: LUFUHAO20141001
+
+Requirements:
+	Programs:
+	Modiles: Scalar::Util, Cwd, Getopt::Long, FindBin
 
 Descriptions:
-	Accept BLASTX tab-delimited output, retrieve taxid, identify seqs
-	Not belong to some species/genus/family/order/class/phylum/kingdom,
-	and output seqID list which are potential contaminants.
+	Determine the insert size given pairs of seqing data by
+	mapping them to a reference.
 
 Options:
 	--help|-h
@@ -136,42 +138,41 @@ GetOptions(
 	"threads|t:i" => \$num_threads,
 	"prefix:s" => \$prefix,
 	"path_java:s" => \$path_java,
-#fastqc
+###fastqc
 	"path_fastqc:s" => \$path_fastqc,
 	"run_fastqc!" => \$test_run_fastqc,
-#cutadapt
+###cutadapt
 	"path_cutadapt:s" => \$path_cutadapt,
 	"cutadapt_overlap:i" => \$cutadapt_overlap,
 	"cutadapt_times:i" => \$cutadapt_times,
 	"file_adaptor:s" => \$file_adaptor,
-#trimmomatic
+###trimmomatic
 	"path_trimmomatic:s" => \$path_trimmomatic,
 	"contaminants:s" => \$contaminants,
 	"trimmomatic_minlen:i" => \$trimmo_minlen,
-#fastqjoin
+###fastqjoin
 	"path_fastqjoin:s" => \$path_fastqjoin,
 	"min_overlap:i" => \$min_overlap,
 	"sizebin:i" => \$sizebin,
-#trimmer
+###trimmer
 	"path_fastxtrimmer:s" => \$path_fastxtrimmer,
 	"trimmer_minlen:i" => \$trimmer_minlen,
-#reversecomplement
+###reversecomplement
 	"path_fastxrc:s" => \$path_fastxreversecomplement,
-#bwa
+###bwa
 	"path_bwa:s" => \$path_bwa,
 	"reference|r:s" => \$bwaref,
 	"minimum_insert:i" => \$minimum_insertsize,
 	"maximum_insert:i" => \$maximum_insertsize,
 	"min_mapq:i" => \$min_mapq,
 	"reindex!" => \$test_reIndex,
-#$path_samtools
+###$path_samtools
 	"path_samtools:s" => \$path_samtools,
-#picard
+###picard
 	"path_picard:s" => \$path_picard,
 	"picard_memory:s" => \$picard_memory,
 	"verbose!" => \$verbose,
 	"version|v!" => \$ver) or die USAGE;
-#die USAGE unless (@ARGV);
 ($help or $ver) and die USAGE;
 
 
@@ -179,7 +180,8 @@ GetOptions(
 ###Default##############################################
 our $cmd='';
 our $stepth=0;
-our $Stage='Stage '.$stepth.' PreCheck';
+our $Stage='Stage '.$stepth.' Loading';
+
 print "\n\n\n###BEGIN###$Stage\n";
 $prefix='Group' unless (defined $prefix);
 our $input_format='fastq' unless (defined $input_format);
@@ -205,7 +207,7 @@ if (defined $FastqR1_list and defined $FastqR2_list) {
 	if (scalar(@FastqR1_arr) == scalar(@FastqR2_arr)) {
 		$num_groupofreads=scalar(@FastqR1_arr);
 		unless ($num_groupofreads>0) {
-		die "Error at $Stage: Please specify input of paired reads\n";
+			die "Error at $Stage: Please specify input of paired reads\n";
 		}
 	}
 	else {
@@ -218,11 +220,12 @@ if (defined $FastqR1_list and defined $FastqR2_list) {
 		unless (-s $FastqR2_arr[$i]) {
 			die "Error at $Stage: The ",$i+1,"th file in R2 does not exist\n";
 		}
-		&AddToReadGroup($i, $FastqR1_arr[$i], $FastqR2_arr[$i]);
+		&AddToReadGroup($i, $FastqR1_arr[$i], $FastqR2_arr[$i], 0);
 		$test_use_reads=1;
 	}
-	map {print 'Group: '.$_->[0].' '.$_->[0]."\n"} @ReadGroups;
+	map {print "Group: \n1. ".$_->[0]."\n2. ".$_->[0]."\n"} @ReadGroups;
 }
+
 
 #Bam_input_check
 our @BamGroups=();
@@ -254,6 +257,7 @@ our $test_run_bwa=0;
 #our $test_run_extractunique=0;
 our $test_run_sizecollect=0;
 $procedure="1,2,6,7" unless (defined $procedure);
+#print "Procedure: $procedure\n";                      ###test
 our @procdures=split(/,/,$procedure);
 foreach (@procdures) {
 	MYTEST02: {
@@ -278,10 +282,16 @@ if ($test_use_bam) {
 	$test_run_bwa=0
 }
 
+print "Checking Programs and their parameters...\n";
 ###fastqc
 $test_run_fastqc=0 unless (defined $test_run_fastqc);
-if ($test_run_fastqc) {
-	defined $path_fastqc ? (&TestCmdExist($path_cutadapt)) : ($path_fastqc='fastqc');
+if ($test_run_fastqc>0) {
+	if (defined $path_fastqc){
+		&TestCmdExist($path_fastqc);
+	}
+	else {
+		$path_fastqc='fastqc';
+	}
 }
 
 ###cutadapt
@@ -357,7 +367,7 @@ if ($test_run_bwa) {
 	}
 	$min_mapq=5 unless (defined $min_mapq);
 	$test_reIndex=0 unless (defined $test_reIndex);
-	die "Please specify maximum insert size for BWA\n" unless (defined $maximum_insertsize)
+	die "Please specify maximum insert size for BWA\n" unless (defined $maximum_insertsize);
 }
 $minimum_insertsize=0 unless (defined $minimum_insertsize);
 
@@ -367,12 +377,12 @@ $minimum_insertsize=0 unless (defined $minimum_insertsize);
 &PreCheck();
 foreach (@procdures){
 	MYTEST01: {
-		if ($_==1 and $test_run_bwa==0){&CutAdapt(); last MYTEST01};
-		if ($_==2 and $test_run_bwa==0){&Trimmomatic(); last MYTEST01};
-		if ($_==3 and $test_run_bwa==0){&FastqJoin(); last MYTEST01};
-		if ($_==4 and $test_run_bwa==0){&FastxTrimmer(); last MYTEST01};
-		if ($_==5 and $test_run_bwa==0){&ReverseComplement(); last MYTEST01};
-		if ($_==6 and $test_run_bwa==0){&Bwa(); last MYTEST01};
+		if ($_==1 and $test_use_bam==0){&CutAdapt(); last MYTEST01};
+		if ($_==2 and $test_use_bam==0){&Trimmomatic(); last MYTEST01};
+		if ($_==3 and $test_use_bam==0){&FastqJoin(); last MYTEST01};
+		if ($_==4 and $test_use_bam==0){&FastxTrimmer(); last MYTEST01};
+		if ($_==5 and $test_use_bam==0){&ReverseComplement(); last MYTEST01};
+		if ($_==6 and $test_use_bam==0){&Bwa(); last MYTEST01};
 #		if ($_==7){&ExtractPaired(); last MYTEST01};
 #		if ($_==8){&ExtractUnique(); last MYTEST01};
 		if ($_==7){&InsertSizeCollect();last MYTEST01};
@@ -399,7 +409,7 @@ sub PreCheck {
 		unlink ($outputR2) if (-e $outputR2);
 		&UnCompress($ReadGroups[$i][0], $outputR1);
 		&UnCompress($ReadGroups[$i][1], $outputR2);
-		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2");
+		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2", 1);
 	}
 	$stepth++;
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
@@ -497,7 +507,7 @@ sub CutAdapt {
 		if ($test_r2==0) {
 			&exec_cmd($cmd." -o $outputR2 $ReadGroups[$i][1]");
 		}
-		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2");
+		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2", 1);
 	}
 	$stepth++;
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
@@ -533,7 +543,7 @@ sub Trimmomatic {
 		unlink ($outputR2) if (-e $outputR2);
 		my $cmdTrimmo=$cmd." $ReadGroups[$i][0] $ReadGroups[$i][1] $outputR1 $prefix._L$i'_R1_trim.'$input_format $outputR2 $prefix._L$i'_R2_trim.'$input_format ILLUMINACLIP:$contaminants:2:30:10 LEADING:18 TRAILING:18 HEADCROP:8 SLIDINGWINDOW:4:18 MINLEN:$trimmo_minlen";
 		&exec_cmd($cmdTrimmo);
-		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2");
+		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2", 1);
 	}	
 	$stepth++;
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
@@ -562,7 +572,7 @@ sub FastqJoin {
 		unlink ($output_join) if (-e $output_join);
 		$cmd.=" $ReadGroups[$i][0] $ReadGroups[$i][1] -o $outputR1 -o $outputR2 -o $output_join";
 		&exec_cmd($cmd);
-		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2");
+		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2", 1);
 		if (-s $output_join) {
 			$cmd='';
 			$cmd="perl -ne 'print length(<>) && <> && <>' $output_join > $output_join'.length'";
@@ -599,7 +609,7 @@ sub FastxTrimmer{
 		my $cmdR2='';
 		$cmdR2=$cmd." -i $ReadGroups[$i][1] -o $outputR2";
 		&exec_cmd($cmdR2);
-		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2");
+		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2", 1);
 	}
 	$stepth++;
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
@@ -633,7 +643,7 @@ sub ReverseComplement {
 		my $cmdR2='';
 		$cmdR2=$cmd." -i $ReadGroups[$i][1] -o $outputR2";
 		&exec_cmd($cmdR2);
-		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2")
+		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2", 1)
 	}
 	$stepth++;
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
@@ -752,7 +762,7 @@ sub ExtractPaired {
 		unlink ($outputR2) if (-e $outputR2);
 		$cmd.=" 'INPUT='$BamGroups[$i]' FASTQ='$outputR1' SECOND_END_FASTQ='$outputR2' INCLUDE_NON_PRIMARY_ALIGNMENTS=false'";
 		&exec_cmd($cmd);
-		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2");
+		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2", 1);
 	}
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
 	print "###END###$Stage\n\n\n";
@@ -783,7 +793,7 @@ sub ExtractUnique {
 		&exec_cmd($cmd_unique);
 		$cmd.=" 'INPUT='$output_filterBam' FASTQ='$outputR1' SECOND_END_FASTQ='$outputR2' INCLUDE_NON_PRIMARY_ALIGNMENTS=false'";
 		&exec_cmd($cmd);
-		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2");
+		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2", 1);
 	}
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
 	print "###END###$Stage\n\n\n";
@@ -966,14 +976,15 @@ sub sizebin {
 
 
 ###Push Read to @ReadGroups
-#&AddToReadGroup($i, $R1, $R2)
+#&AddToReadGroup($i, $R1, $R2, run_fastqc)
 sub AddToReadGroup {
-	my ($i, $R1, $R2)=@_;
+	my ($i, $R1, $R2, $run_this_fastqc)=@_;
 	if (-s $R1 and -s $R2) {
 		@{$ReadGroups[$i]}=($R1, $R2);
-		&FastQC($R1);
-		&FastQC($R2);
-		
+		if ($run_this_fastqc){
+			&FastQC($R1);
+			&FastQC($R2);
+		}
 	}
 	else {
 		die "Error at $Stage: output empty/none files\n";
@@ -1000,7 +1011,7 @@ sub AddToBamGroup {
 #&FastQC(Fastq_File)
 sub FastQC {
 	my $fastq=shift @_;
-	&exec_cmd("$path_fastqc $fastq' -o . -f fastq -t '$num_threads' --noextract'") if ($test_run_fastqc>0);
+	&exec_cmd("$path_fastqc $fastq -o . -f fastq -t $num_threads --noextract") if ($test_run_fastqc>0);
 }
 
 
@@ -1009,11 +1020,12 @@ sub FastQC {
 #UnCompress (Compress_file_In, UnCompressedFile_Out)
 sub UnCompress {
 	my ($in, $out)=@_;
+	print "UnCompress $in to $out ...\n";
 	MYTEST: {
-		if ($in=~/(\.fastq$)|(\.fq$)/i) {&exec_cmd("ln -sf $in $out"); last MYTEST;}
+		if ($in=~/\.fastq$|\.fq$/i) {&exec_cmd("ln -sf $in $out"); last MYTEST;}
 		if ($in=~/\.tar\.gz$/i) {&exec_cmd("tar -xvf --to-stdout $in > $out"); last MYTEST;}
-		if ($in=~/(\.gz$)|(\.gzip$)/i) {&exec_cmd("gunzip -c $in > $out"); last MYTEST;}
-		if ($in=~/(\.bz2$)|(\.bzip2$)/i) {&exec_cmd("tar -xjf --to-stdout $in > $out"); last MYTEST;}
+		if ($in=~/\.gz$|\.gzip$/i) {&exec_cmd("gunzip -c $in > $out"); last MYTEST;}
+		if ($in=~/\.bz2$|\.bzip2$/i) {&exec_cmd("tar -xjf --to-stdout $in > $out"); last MYTEST;}
 	}
 }
 
