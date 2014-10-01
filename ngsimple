@@ -1,5 +1,5 @@
 #!/bin/sh
-RunDir=$(cd `dirname $0`; pwd)
+RunDir=$(cd `dirname $(readlink -f $0)`; pwd)
 MachType=$(uname -m)
 
 ################# help message ######################################
@@ -9,7 +9,7 @@ cat<<HELP
 
 ngsimple --- NGS sIMulation PipeLinE
 
-Version: 20140919
+Version: 20141001
 
 Descriptions:
 Simulate Illumina reads from reference sequences with customized 
