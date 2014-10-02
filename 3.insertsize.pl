@@ -9,7 +9,7 @@ use constant USAGE=><<EOH;
 SYNOPSIS:
 
 perl $0 --input my.fa [Options]
-Version: LUFUHAO20141001
+Version: LUFUHAO20141002
 
 Requirements:
 	Programs:
@@ -51,9 +51,9 @@ Options:
     #cutadapt
 	--path_cutadapt	</path/to/cutadapt>
 	--cutadapt_overlap	<INT>
-		Try to remove adapters at most INT times for --times;
-	--cutadapt_times	<INT>
 		Minimum overlap length for --overlap;
+	--cutadapt_times	<INT>
+		Try to remove adapters at most INT times for --times;
 	--file_adaptor	</path/to/adators_file>
     #trimmomatic
 	--path_trimmomatic:s	</path/to/trimmomatic.jar>
@@ -399,7 +399,7 @@ sub PreCheck {
 	print "\n\n\n###BEGIN###$Stage\n";
 	mkdir ("$run_dir", 0766) || die "Error at $Stage: $run_dir\n" unless (-d $run_dir);;
 	chdir "$run_dir" || die "Error at $Stage: can not cd dir $run_dir：$!\n";
-	my $newdir=$run_dir.'/'.$stepth.'.fastq';
+	my $newdir=$run_dir.'/step'.$stepth.'_fastq';
 	mkdir ($newdir, 0766) || die "Error at $Stage: can not create directory $newdir\n";
 	chdir "$newdir" or die "Error at $Stage: can not cd dir $newdir：$!\n";
 	for (my $i=0; $i<$num_groupofreads;$i++) {
@@ -409,7 +409,7 @@ sub PreCheck {
 		unlink ($outputR2) if (-e $outputR2);
 		&UnCompress($ReadGroups[$i][0], $outputR1);
 		&UnCompress($ReadGroups[$i][1], $outputR2);
-		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2", 1);
+		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2", 0);#######                      ###temp
 	}
 	$stepth++;
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
@@ -425,7 +425,7 @@ sub CutAdapt {
 	$Stage='Stage '.$stepth.' CutAdapt';
 	print "\n\n\n###BEGIN###$Stage\n";
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
-	my $newdir=$run_dir.'/'.$stepth.'.cutadapt';
+	my $newdir=$run_dir.'/step'.$stepth.'_cutadapt';
 	mkdir ($newdir, 0766) || die "Error at $Stage: can not create directory $newdir\n";
 	chdir "$newdir" or die "Error at $Stage: can not cd dir $newdir：$!\n";
 	$cmd="$path_cutadapt --format=$input_format --times=$cutadapt_times --overlap=$cutadapt_overlap";
@@ -435,12 +435,14 @@ sub CutAdapt {
 	my $adaptor_seq='';
 	while (my $line=<ADAPTORS>) {
 		chomp $line;
-		if ($line=~m/^>(.+)\s+.*/) {
-			if (($adaptor_id ne '') and defined ($adaptor_seq ne '') and (! exists $adaptor_list{$adaptor_id})){
-				$adaptor_list{$adaptor_id}=$adaptor_seq;
-			}
-			else {
-				die "Error at $Stage: Wrong adaptor ID\n";
+		if ($line=~m/^>(\S+)\s*.*/) {
+			if (($adaptor_id ne '') and ($adaptor_seq ne '')){
+				if (! exists $adaptor_list{$adaptor_id}) {
+					$adaptor_list{$adaptor_id}=$adaptor_seq;
+				}
+				else {
+					die "Error at $Stage: repeated adaptor ID\n";
+				}
 			}
 			$adaptor_id=$1;
 		}
@@ -448,6 +450,7 @@ sub CutAdapt {
 			$adaptor_seq.=$line;
 		}
 	}
+	$adaptor_list{$adaptor_id}=$adaptor_seq;
 	close ADAPTORS;
 	my @primers_arr=();
 	@primers_arr=keys %adaptor_list;
@@ -523,7 +526,7 @@ sub Trimmomatic {
 	$Stage='Stage '.$stepth.' Trimmomatic';
 	print "\n\n\n###BEGIN###$Stage\n";
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
-	my $newdir=$run_dir.'/'.$stepth.'.trimmomatic';
+	my $newdir=$run_dir.'/step'.$stepth.'_trimmomatic';
 	mkdir ($newdir, 0766) || die "Error at $Stage: can not create directory $newdir\n";
 	chdir "$newdir" or die "Error at $Stage: can not cd dir $newdir：$!\n";
 	$cmd="$path_java -jar $path_trimmomatic PE -threads $num_threads ";
@@ -541,7 +544,7 @@ sub Trimmomatic {
 		unlink ($outputR1) if (-e $outputR1);
 		my $outputR2=$prefix."_L$i"."_R2_trim.$input_format";
 		unlink ($outputR2) if (-e $outputR2);
-		my $cmdTrimmo=$cmd." $ReadGroups[$i][0] $ReadGroups[$i][1] $outputR1 $prefix._L$i'_R1_trim.'$input_format $outputR2 $prefix._L$i'_R2_trim.'$input_format ILLUMINACLIP:$contaminants:2:30:10 LEADING:18 TRAILING:18 HEADCROP:8 SLIDINGWINDOW:4:18 MINLEN:$trimmo_minlen";
+		my $cmdTrimmo=$cmd." $ReadGroups[$i][0] $ReadGroups[$i][1] $outputR1 $prefix"."_L$i".'_R1_trim_unpaired.'."$input_format $outputR2 $prefix"."_L$i".'_R2_trim_unpaired.'."$input_format ILLUMINACLIP:$contaminants:2:30:10 LEADING:18 TRAILING:18 HEADCROP:8 SLIDINGWINDOW:4:18 MINLEN:$trimmo_minlen";
 		&exec_cmd($cmdTrimmo);
 		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2", 1);
 	}	
@@ -559,7 +562,7 @@ sub FastqJoin {
 	$Stage='Stage '.$stepth.' FastqJoin';
 	print "\n\n\n###BEGIN###$Stage\n";
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
-	my $newdir=$run_dir.'/'.$stepth.'.fastqjoin';
+	my $newdir=$run_dir.'/step'.$stepth.'_fastqjoin';
 	mkdir ($newdir, 0766) || die "Error at $Stage: can not create directory $newdir\n";
 	chdir "$newdir" or die "Error at $Stage: can not cd dir $newdir：$!\n";
 	for (my $i=0; $i<$num_groupofreads;$i++) {
@@ -572,10 +575,10 @@ sub FastqJoin {
 		unlink ($output_join) if (-e $output_join);
 		$cmd.=" $ReadGroups[$i][0] $ReadGroups[$i][1] -o $outputR1 -o $outputR2 -o $output_join";
 		&exec_cmd($cmd);
-		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2", 1);
+		&AddToReadGroup($i, "$newdir/$outputR1", "$newdir/$outputR2", 0);
 		if (-s $output_join) {
 			$cmd='';
-			$cmd="perl -ne 'print length(<>) && <> && <>' $output_join > $output_join'.length'";
+			$cmd="perl -ne \'print length(<>).\"\n\"; <>; <>;\' $output_join > $output_join".'.length';
 			&exec_cmd($cmd);
 			&sizebin($output_join.'.length', $sizebin, $output_join.'.sizebin');
 		}
@@ -594,7 +597,7 @@ sub FastxTrimmer{
 	$Stage='Stage '.$stepth.' FastxTrimmer';
 	print "\n\n\n###BEGIN###$Stage\n";
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
-	my $newdir=$run_dir.'/'.$stepth.'.fastxtrimmer';
+	my $newdir=$run_dir.'/step'.$stepth.'_fastxtrimmer';
 	mkdir ($newdir, 0766) || die "Error at $Stage: can not create directory $newdir\n";
 	chdir "$newdir" or die "Error at $Stage: can not cd dir $newdir：$!\n";
 	$cmd="$path_fastxtrimmer -l $trimmer_minlen";
@@ -625,7 +628,7 @@ sub ReverseComplement {
 	$Stage='Stage '.$stepth.' ReverseComplement';
 	print "\n\n\n###BEGIN###$Stage\n";
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
-	my $newdir=$run_dir.'/'.$stepth.'.reversecomplement';
+	my $newdir=$run_dir.'/step'.$stepth.'_reversecomplement';
 	mkdir ($newdir, 0766) || die "Error at $Stage: can not create directory $newdir\n";
 	chdir "$newdir" or die "Error at $Stage: can not cd dir $newdir：$!\n";
 	$cmd="$path_fastxreversecomplement";
@@ -671,16 +674,16 @@ sub Bwa {
 		$cmd="$path_bwa index -a is -p ref ref";
 		&exec_cmd($cmd);
 	}
-	my $newdir=$run_dir.'/'.$stepth.'.bwa';
+	my $newdir=$run_dir.'/step'.$stepth.'_bwa';
 	mkdir ($newdir, 0766) || die "Error at $Stage: can not create directory $newdir\n";
 	chdir "$newdir" or die "Error at $Stage: can not cd dir $newdir：$!\n";
 	for (my $i=0; $i<$num_groupofreads;$i++) {
-		$cmd="$path_bwa aln -t $num_threads $run_dir'/ref' ";
+		$cmd="$path_bwa aln -t $num_threads $run_dir".'/ref ';
 		my $outputR1=$prefix."_L$i"."_R1_bwaaln.sai";
 		unlink ($outputR1) if (-e $outputR1);
 		my $outputR2=$prefix."_L$i"."_R2_bwaaln.sai";
 		unlink ($outputR2) if (-e $outputR2);
-		my $output_bam=$prefix."_L$i"."_R2_bwaalnQ$min_mapq.bam";
+		my $output_bam=$prefix."_L$i"."_bwaalnQ$min_mapq.bam";
 		unlink ($output_bam) if (-e $output_bam);
 		my $output_sortbam=$prefix."_L$i"."_R2_bwaalnQ$min_mapq.sort.bam";
 		my $output_sortbam_prefix=$prefix."_L$i"."_R2_bwaalnQ$min_mapq.sort";
@@ -692,13 +695,13 @@ sub Bwa {
 		$cmdR2=$cmd." $ReadGroups[$i][1] > $outputR2";
 		&exec_cmd($cmdR2);
 		if (-s $outputR1 and -s $outputR2) {
-			my $cmd_sampe="$path_bwa' sampe -a '$maximum_insertsize -r \@RG\tID:L$i'\tSM:L'$i $run_dir'/ref' $outputR1 $outputR2 $ReadGroups[$i][0] $ReadGroups[$i][1]' | '$path_samtools' view -bS -q '$min_mapq' -F 12 - > '$output_bam";
+			my $cmd_sampe="$path_bwa sampe -a $maximum_insertsize -r \'".'@RG\tID:L'.$i.'\tSM:L'.$i."\'".' '.$run_dir.'/ref '."$outputR1 $outputR2 $ReadGroups[$i][0] $ReadGroups[$i][1]".' | '.$path_samtools.' view -bS -q '.$min_mapq.' -F 12 - > '.$output_bam;
 			&exec_cmd($cmd_sampe);
 			$cmd='';
 			$cmd="$path_samtools sort $output_bam $output_sortbam_prefix";
 			&exec_cmd($cmd);
 			$cmd='';
-			$cmd="$path_java' -Xmx'$picard_memory' -jar '$path_picard'/MarkDuplicates.jar I='$output_sortbam' O='$output_sortbam_prefix'.rmdup.bam REMOVE_DUPLICATES=TRUE METRICS_FILE='$output_sortbam_prefix'.rmdup.log'";
+			$cmd="$path_java -Xmx$picard_memory -jar $path_picard/MarkDuplicates.jar I=$output_sortbam O=$output_sortbam_prefix.rmdup.bam REMOVE_DUPLICATES=TRUE METRICS_FILE=$output_sortbam_prefix.rmdup.log";
 		}
 		else {
 			die "Error at $Stage: BWA aln output error\n";
@@ -722,19 +725,19 @@ sub InsertSizeCollect {
 	$Stage='Stage '.$stepth.' InsertSizeCollect';
 	print "\n\n\n###BEGIN###$Stage\n";
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
-	my $newdir=$run_dir.'/'.$stepth.'.InsertSizeCollect';
+	my $newdir=$run_dir.'/step'.$stepth.'_InsertSizeCollect';
 	mkdir ($newdir, 0766) || die "Error at $Stage: can not create directory $newdir\n";
 	chdir "$newdir" or die "Error at $Stage: can not cd dir $newdir：$!\n";
 	
 	for (my $i=0; $i<$num_groupofreads;$i++) {
-		$cmd="perl $Bin/utils/getInsertSize_from_sambam_LUF.pl --min_insertsize $minimum_insertsize --max_insertsize $maximum_insertsize --min_mapq $min_mapq --path_samtools $path_samtools '--input '$BamGroups[$i]' ";
+		$cmd="perl $Bin/utils/getInsertSize_from_sambam_LUF.pl --min_insertsize $minimum_insertsize --max_insertsize $maximum_insertsize --min_mapq $min_mapq --path_samtools $path_samtools --input $BamGroups[$i] ";
 		my $outputPaired=$prefix."_L$i"."_Paired.sum";
 		unlink ($outputPaired) if (-e $outputPaired);
 		my $outputUnique=$prefix."_L$i"."_Unique.sum";
 		unlink ($outputUnique) if (-e $outputUnique);
 		my $cmdPaired=$cmd." --output $outputPaired ";
 		&exec_cmd($cmdPaired);
-		my $cmdUnique=$cmd." --output $outputUnique ";
+		my $cmdUnique=$cmd." --output $outputUnique --tag XT:A:U";
 		&exec_cmd($cmdUnique);
 	}
 	chdir "$run_dir" or die "Error at $Stage: can not cd dir $run_dir：$!\n";
