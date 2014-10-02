@@ -2,12 +2,13 @@
 use strict;
 use warnings;
 use Getopt::Long;
+use Smart::Comments '#####';
 use constant USAGE =><<EOH;
 
 SYNOPSIS:
 
 perl $0 [Options]
-Version: LUFUHAO20140801
+Version: LUFUHAO20141002
 
 Descriptions:
 	Calculate insert size for paired end or mate paired NGS. 
@@ -70,7 +71,7 @@ GetOptions(
 	"max_insertsize:i" => \$max_insertsize,
 	"path_samtools:s" => \$path_samtools,
 	"min_mapq:i" => \$min_mapq,
-	"tag|g" => \$tag,
+	"tag|g:s" => \$tag,
 	"verbose!" => \$verbose,
 	"version|v!" => \$version) or die USAGE;
 #die USAGE unless (@ARGV);
@@ -114,6 +115,7 @@ our @tags=split(/,/, $tag) if (defined $tag);
 
 
 
+
 ###Main program######################################################
 our %insertsize=();
 our %id=();
@@ -121,7 +123,7 @@ our @ref=();
 my $temp01=0;
 my $ref='';
 my $previous_ref='';
-while (my $line=<INPUT>) {
+SW1: while (my $line=<INPUT>) {
 	chomp $line;
 	if ($line=~m/^\@/) {
 		if ($line=~m/^\@SQ\s+SN:(\S+)\s+LN:\d+/) {
@@ -129,7 +131,8 @@ while (my $line=<INPUT>) {
 		}
 		next;
 	}
-	my @arr=split(/\t/, $line);
+	my @arr=();
+	@arr=split(/\t/, $line);
 #	print "$arr[2]\n";                             ###test###
 	die "Wrong Bam input $line\n" if (@arr < 11);
 #0	1	2	3	4	5	6	7	8	9	10
@@ -138,7 +141,9 @@ while (my $line=<INPUT>) {
 	next if ((! $arr[1] & 0x3) or ($arr[1] & 0xc) or (! defined $arr[2]) or $arr[3]<0 or $arr[4]<$min_mapq or $arr[8]==0);#($arr[6] ne '*' or $arr[6] ne '=') or $arr[7]>0
 	if (defined $tag) {
 		foreach my $ind_tag (@tags) {
-			next unless ($line=~m/$ind_tag/);
+#			$ind_tag=quotemeta($ind_tag);
+			next SW1 unless ($line=~ m/\Q$ind_tag\E/);
+#			print $ind_tag."\n".$line."\n";
 		}
 	}
 	(my $base_name =$arr[0])=~s/\/.*//;
@@ -156,6 +161,7 @@ while (my $line=<INPUT>) {
 			}
 			elsif (scalar (@{$id{$base_name}})==1) {
 				@{$id{$base_name}[1]}=($arr[2], $arr[3], length($arr[9]));
+				print "$arr[2], $arr[3], ".length($arr[9])."\n" if (defined $verbose);
 			}
 			if (scalar (@{$id{$base_name}})==2) {
 				&CalculateInsertSize($base_name, @{$id{$base_name}[0]}, @{$id{$base_name}[1]});
@@ -259,10 +265,11 @@ sub CalculateInsertSize {
 #	print "$pos1\t$pos2\n$len2";                                           ###for test###
 	$CISinsertsize=$pos2-$pos1;
 #	print "$CISinsertsize\n";                                              ###for test###
-	$CISinsertsize=abs($CISinsertsize)+$len2+1;
+	$CISinsertsize=abs($CISinsertsize)+$len2;
 #	print "$CISinsertsize\n";                                              ###for test###
 	if (defined $max_insertsize) {
 		$insertsize{$read_id}=$CISinsertsize if (($CISinsertsize>$min_insertsize) and ($CISinsertsize<$max_insertsize));
+		print "$read_id, $ref1, $pos1, $len1, $ref2, $pos2, $len2\n$CISinsertsize\n" if (defined $verbose);
 	}
 	else {
 		$insertsize{$read_id}=$CISinsertsize if ($CISinsertsize>$min_insertsize);
