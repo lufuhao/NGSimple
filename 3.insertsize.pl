@@ -9,7 +9,7 @@ use constant USAGE=><<EOH;
 SYNOPSIS:
 
 perl $0 --input my.fa [Options]
-Version: LUFUHAO20141002
+Version: LUFUHAO20141016
 
 Requirements:
 	Programs:
@@ -223,7 +223,7 @@ if (defined $FastqR1_list and defined $FastqR2_list) {
 		&AddToReadGroup($i, $FastqR1_arr[$i], $FastqR2_arr[$i], 0);
 		$test_use_reads=1;
 	}
-	map {print "Group: \n1. ".$_->[0]."\n2. ".$_->[0]."\n"} @ReadGroups;
+	map {print "Group: \n1. ".$_->[0]."\n2. ".$_->[1]."\n"} @ReadGroups;
 }
 
 
@@ -439,6 +439,7 @@ sub CutAdapt {
 			if (($adaptor_id ne '') and ($adaptor_seq ne '')){
 				if (! exists $adaptor_list{$adaptor_id}) {
 					$adaptor_list{$adaptor_id}=$adaptor_seq;
+					$adaptor_seq='';
 				}
 				else {
 					die "Error at $Stage: repeated adaptor ID\n";
@@ -472,7 +473,7 @@ sub CutAdapt {
 				$cmd_r2.=" --adapter $adaptor_list{$_} ";
 			}
 		}
-		elsif ($_=~/\S+_5p$/i) {
+		elsif ($_=~/(\S+)_5p$/i) {
 			if ($1=~/\S+_r1/) {
 				$cmd_r1.=" --front $adaptor_list{$_} ";
 				$test_r1++;
@@ -567,11 +568,11 @@ sub FastqJoin {
 	chdir "$newdir" or die "Error at $Stage: can not cd dir $newdir：$!\n";
 	for (my $i=0; $i<$num_groupofreads;$i++) {
 		$cmd="$path_fastqjoin -m $min_overlap ";
-		my $outputR1=$prefix."_L$i"."_R1_join.un1";
+		my $outputR1=$prefix."_L$i"."_R1_join.fq";
 		unlink ($outputR1) if (-e $outputR1);
-		my $outputR2=$prefix."_L$i"."_R2_join.un2";
+		my $outputR2=$prefix."_L$i"."_R2_join.fq";
 		unlink ($outputR2) if (-e $outputR2);
-		my $output_join=$prefix."_L$i"."_join.join";
+		my $output_join=$prefix."_L$i"."_join.fq";
 		unlink ($output_join) if (-e $output_join);
 		$cmd.=" $ReadGroups[$i][0] $ReadGroups[$i][1] -o $outputR1 -o $outputR2 -o $output_join";
 		&exec_cmd($cmd);
@@ -686,7 +687,7 @@ sub Bwa {
 		my $output_bam=$prefix."_L$i"."_bwaalnQ$min_mapq.bam";
 		unlink ($output_bam) if (-e $output_bam);
 		my $output_sortbam=$prefix."_L$i"."_R2_bwaalnQ$min_mapq.sort.bam";
-		my $output_sortbam_prefix=$prefix."_L$i"."_R2_bwaalnQ$min_mapq.sort";
+		my $output_sortbam_prefix=$prefix."_L$i"."_bwaalnQ$min_mapq.sort";
 		unlink ($output_sortbam) if (-e $output_sortbam);
 		my $cmdR1='';
 		$cmdR1=$cmd." $ReadGroups[$i][0] > $outputR1";
@@ -695,13 +696,15 @@ sub Bwa {
 		$cmdR2=$cmd." $ReadGroups[$i][1] > $outputR2";
 		&exec_cmd($cmdR2);
 		if (-s $outputR1 and -s $outputR2) {
-			my $cmd_sampe="$path_bwa sampe -a $maximum_insertsize -r \'".'@RG\tID:L'.$i.'\tSM:L'.$i."\'".' '.$run_dir.'/ref '."$outputR1 $outputR2 $ReadGroups[$i][0] $ReadGroups[$i][1]".' | '.$path_samtools.' view -bS -q '.$min_mapq.' -F 12 - > '.$output_bam;
+#			my $cmd_sampe="$path_bwa sampe -a $maximum_insertsize -r \'".'@RG\tID:L'.$i.'\tSM:L'.$i."\'".' '.$run_dir.'/ref '."$outputR1 $outputR2 $ReadGroups[$i][0] $ReadGroups[$i][1]".' | '.$path_samtools.' view -bS -q '.$min_mapq.' -F 12 - > '.$output_bam;
+			my $cmd_sampe="$path_bwa sampe -a $maximum_insertsize ".$run_dir.'/ref '."$outputR1 $outputR2 $ReadGroups[$i][0] $ReadGroups[$i][1]".' | '.$path_samtools.' view -bS -q '.$min_mapq.' -F 12 - > '.$output_bam;
 			&exec_cmd($cmd_sampe);
 			$cmd='';
 			$cmd="$path_samtools sort $output_bam $output_sortbam_prefix";
 			&exec_cmd($cmd);
 			$cmd='';
-			$cmd="$path_java -Xmx$picard_memory -jar $path_picard/MarkDuplicates.jar I=$output_sortbam O=$output_sortbam_prefix.rmdup.bam REMOVE_DUPLICATES=TRUE METRICS_FILE=$output_sortbam_prefix.rmdup.log";
+			$cmd="$path_java -Xmx$picard_memory -jar $path_picard/MarkDuplicates.jar I=$output_sortbam O=$output_sortbam_prefix.rmdup.bam REMOVE_DUPLICATES=TRUE METRICS_FILE=$output_sortbam_prefix.rmdup.log ASSUME_SORTED=TRUE";
+			&exec_cmd($cmd);
 		}
 		else {
 			die "Error at $Stage: BWA aln output error\n";
