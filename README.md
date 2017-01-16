@@ -42,12 +42,15 @@ separately install them before running this pipeline. The bash scripts in
 they are not available in PATH. 
 
 Some necessary linux dependancies
+
 *    make, cmake, gcc, g++, gcc-c++, tar, unzip, GD, etc
 *    zlib, boost, ncurses, sparsehash, etc
 *    PerlIO::gzip, GD::Graphics::bars, Getopt::Long, List::Util, Cwd, FindBin, etc
 
 External programs:
+
     **Program**		**Necessary/Optional**	**Homepage**
+
 *    Mason          Msg    https://www.seqan.de/projects/mason/
 *    Trimmomatic    Msg    http://www.usadellab.org/cms/?page=trimmomatic
 *    velvet         Msg    https://www.ebi.ac.uk/~zerbino/velvet/
@@ -70,35 +73,37 @@ you want (/etc/profile or ~/.bashrc):
 
 
 ##3. Running
+
 ###3.1 configuring parameter $PWD/CONFIG
 
 $PWD/CONFIG file
-################## File border ######################################
-#Example:
-#reference=/Full/path/to/reference.fasta
-reference=
-#example:
-#tab-delimited
-#LibID	libtype	readlength	libcov	insert_size
-#lib1	pe	200	30	600
-#lib2	se	300	5	0
-#lib3	mp	150	10	7000
-lib1
-lib2
-lib3
-#Example:
-#UniqueFolderName: assembly name (space free)
-#UniqueFolderName	index combination
-#tab-delimited
-*IMPORTANT: should support THREE libraries each folder at most;
-#Group1	lib1	lib2
-*will assemble lib1 and lib2 into one assembly under the folder Group1
-#Group2	lib1	lib2	lib3
-*will assemble lib1 and lib2 into one assembly under the folder Group1
-Assem1
-Assem2
-Assem3
-################## File border ######################################
+
+	################## File border ######################################
+	#Example:
+	#reference=/Full/path/to/reference.fasta
+	reference=
+	#example:
+	#tab-delimited
+	#LibID	libtype	readlength	libcov	insert_size
+	#lib1	pe	200	30	600
+	#lib2	se	300	5	0
+	#lib3	mp	150	10	7000
+	lib1
+	lib2
+	lib3
+	#Example:
+	#UniqueFolderName: assembly name (space free)
+	#UniqueFolderName	index combination
+	#tab-delimited
+	*IMPORTANT: should support THREE libraries each folder at most;
+	#Group1	lib1	lib2
+	*will assemble lib1 and lib2 into one assembly under the folder Group1
+	#Group2	lib1	lib2	lib3
+	*will assemble lib1 and lib2 into one assembly under the folder Group1
+	Assem1
+	Assem2
+	Assem3
+	################## File border ######################################
 
 
 ###3.2 Running NGSimple
