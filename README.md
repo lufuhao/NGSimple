@@ -152,4 +152,4 @@ me at <Fu-Hao.Lu@jic.ac.uk>
 
 	Norwich NR4 7UH, United Kingdom
 
-	E-mail: <Fu-Hao.Lu@jic.ac.uk>
+	E-mail: \<Fu-Hao.Lu@jic.ac.uk\>
