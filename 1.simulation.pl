@@ -64,9 +64,9 @@ OPTIONS
 		[Opt] Print current SCRIPT version;
 
 EXAMPLE
-	perl ../NGS.simulation2.pl -i Random_sequence.fasta --lib_type se --lib_cov 10 --seed 88 --output_fmt fq --lib_read_length 100
-	perl ../NGS.simulation2.pl -i Random_sequence.fasta --lib_type pe --lib_cov 10 --seed 88 --output_fmt fq --lib_read_length 100 --lib_insertsize 7000
-	perl ../NGS.simulation2.pl -i Random_sequence.fasta --lib_type mp --lib_cov 10 --seed 88 --output_fmt fq --lib_read_length 100 --lib_insertsize 7000
+	perl 1.simulation.pl -i my.ref.fasta --lib_type se --lib_cov 10 --seed 88 --output_fmt fq --lib_read_length 100
+	perl 1.simulation.pl -i my.ref.fasta --lib_type pe --lib_cov 10 --seed 88 --output_fmt fq --lib_read_length 100 --lib_insertsize 7000
+	perl 1.simulation.pl -i my.ref.fasta --lib_type mp --lib_cov 10 --seed 88 --output_fmt fq --lib_read_length 100 --lib_insertsize 7000
 
 AUTHOR
 	Fu-Hao Lu
@@ -113,23 +113,34 @@ if (defined $config_file and -s $config_file) {
 else {
 	if (defined $input_fasta and -s $input_fasta) {
 		die "Please input the fasta reference\n";
-	}else{print "Your input fasta file is $input_fasta\n";}
+	}
+	else{
+		print "Your input fasta file is $input_fasta\n";
+	}
 	if (defined $lib_type) {
 		@lib_types=split(/,/, $lib_type);
 		print "Library_type: @lib_types\n";
-	}else {die "Please input the lib_type, or specify that in config_file\n";}
+	}
+	else {
+		die "Please input the lib_type, or specify that in config_file\n";
+	}
 	if (defined $lib_read_length) {
 		@lib_read_lengths=split(/,/, $lib_read_length);
 		print "Library_read_length: @lib_read_lengths\n";
-	}else{die "Please input the read_length or specify that in config_file\n";}
+	}
+	else {
+		die "Please input the read_length or specify that in config_file\n";
+	}
 	$lib_size=0 unless (defined $lib_size);
 	@lib_sizes=split(/,/, $lib_size);
 	print "Library_size: @lib_sizes\n";
 	if  (defined $lib_cov) {
 		@lib_covs=split(/,/, $lib_cov);
 		print "Library_coverage: @lib_covs\n";
-	}else {die "Please input the coverage corresponding to the lib_size\n";}
-
+	}
+	else {
+		die "Please input the coverage corresponding to the lib_size\n";
+	}
 }
 ###test if the arrays get the same lenth
 my $max_num_sim=max scalar(@lib_types),scalar(@lib_read_lengths),scalar(@lib_covs);
@@ -144,7 +155,7 @@ unless (scalar(@lib_names)>1) {
 		push(@lib_names, "Lib$i");
 	}
 }
-print "A total of $max_num_sim libs are setting to be produced\n" if (defined $verbose);
+print "Info: A total of $max_num_sim libs are setting to be produced\n" if (defined $verbose);
 
 
 
