@@ -132,15 +132,18 @@ From: http://seqanswers.com/forums/showthread.php?t=2101
 
 
 ###3.3 Determine insert size distribution (NOT using Picard CollectInsertSizeMetrics.jar)
+
 	bash$ 3.insertsize.pl --help
 
 ##4. Trouble-shooting
+
 Every perl script could be separately used for advanced users. In case
  you have any problem or question about this pipeline, please E-mail 
 me at <Fu-Hao.Lu@jic.ac.uk>
 
 
 ##Author:
+
   Fu-Hao Lu
   Post-Doctoral Scientist in Micheal Bevan laboratory
   Cell and Developmental Department, John Innes Centre
