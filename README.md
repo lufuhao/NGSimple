@@ -44,27 +44,27 @@ separately install them before running this pipeline. The bash scripts in
  ProgramRoot/utils/ might help you install them if you did not install or 
 they are not available in PATH. 
 
-Some necessary linux dependancies
+###2.1 Some necessary linux dependancies
 
 *    make, cmake, gcc, g++, gcc-c++, tar, unzip, GD, etc
 *    zlib, boost, ncurses, sparsehash, etc
 *    PerlIO::gzip, GD::Graphics::bars, Getopt::Long, List::Util, Cwd, FindBin, etc
 
-External programs:
+###2.2 External programs:
 
-	**Program** | **Necessary/Optional**
-	----------- | ----------------------
-	[Mason](https://www.seqan.de/projects/mason/) | Msg
-	[Trimmomatic](http://www.usadellab.org/cms/?page=trimmomatic) | Msg
-	[Velvet](https://www.ebi.ac.uk/~zerbino/velvet/) | Msg
-	[MUMmer](http://mummer.sourceforge.net/) | Msg
-	[FastQC](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) | Msg
-	[CutAdapt](https://code.google.com/p/cutadapt/) | Opt
-	[fastq-join](https://code.google.com/p/ea-utils/) | Opt
-	[fastx_toolkit](http://hannonlab.cshl.edu/fastx_toolkit/index.html) | Opt
-	[BWA](http://bio-bwa.sourceforge.net/) | Msg
-	[SAMtools](http://samtools.sourceforge.net/) | Msg
-	[PICARD_tools](http://picard.sourceforge.net/) | Msg
+>	**Program** | **Necessary/Optional**
+>	----------- | ----------------------
+>	[Mason](https://www.seqan.de/projects/mason/) | Msg
+>	[Trimmomatic](http://www.usadellab.org/cms/?page=trimmomatic) | Msg
+>	[Velvet](https://www.ebi.ac.uk/~zerbino/velvet/) | Msg
+>	[MUMmer](http://mummer.sourceforge.net/) | Msg
+>	[FastQC](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) | Msg
+>	[CutAdapt](https://code.google.com/p/cutadapt/) | Opt
+>	[fastq-join](https://code.google.com/p/ea-utils/) | Opt
+>	[fastx_toolkit](http://hannonlab.cshl.edu/fastx_toolkit/index.html) | Opt
+>	[BWA](http://bio-bwa.sourceforge.net/) | Msg
+>	[SAMtools](http://samtools.sourceforge.net/) | Msg
+>	[PICARD_tools](http://picard.sourceforge.net/) | Msg
 
 NOTE: the programs need to set the environmental variables (PATH, 
 CPLUS_INCLUDE_PATH, LD_LIBRARY_PATH, etc) to be easily found. 
