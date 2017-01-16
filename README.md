@@ -52,19 +52,19 @@ they are not available in PATH.
 
 ###2.2 External programs:
 
->	**Program** | **Necessary/Optional**
->	----------- | ----------------------
->	[Mason](https://www.seqan.de/projects/mason/) | Msg
->	[Trimmomatic](http://www.usadellab.org/cms/?page=trimmomatic) | Msg
->	[Velvet](https://www.ebi.ac.uk/~zerbino/velvet/) | Msg
->	[MUMmer](http://mummer.sourceforge.net/) | Msg
->	[FastQC](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) | Msg
->	[CutAdapt](https://code.google.com/p/cutadapt/) | Opt
->	[fastq-join](https://code.google.com/p/ea-utils/) | Opt
->	[fastx_toolkit](http://hannonlab.cshl.edu/fastx_toolkit/index.html) | Opt
->	[BWA](http://bio-bwa.sourceforge.net/) | Msg
->	[SAMtools](http://samtools.sourceforge.net/) | Msg
->	[PICARD_tools](http://picard.sourceforge.net/) | Msg
+**Program** | **Necessary/Optional**
+----------- | ----------------------
+[Mason](https://www.seqan.de/projects/mason/) | Msg
+[Trimmomatic](http://www.usadellab.org/cms/?page=trimmomatic) | Msg
+[Velvet](https://www.ebi.ac.uk/~zerbino/velvet/) | Msg
+[MUMmer](http://mummer.sourceforge.net/) | Msg
+[FastQC](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) | Msg
+[CutAdapt](https://code.google.com/p/cutadapt/) | Opt
+[fastq-join](https://code.google.com/p/ea-utils/) | Opt
+[fastx_toolkit](http://hannonlab.cshl.edu/fastx_toolkit/index.html) | Opt
+[BWA](http://bio-bwa.sourceforge.net/) | Msg
+[SAMtools](http://samtools.sourceforge.net/) | Msg
+[PICARD_tools](http://picard.sourceforge.net/) | Msg
 
 NOTE: the programs need to set the environmental variables (PATH, 
 CPLUS_INCLUDE_PATH, LD_LIBRARY_PATH, etc) to be easily found. 
@@ -117,11 +117,17 @@ NOTE: Since Velvet is extremely memory-consuming, it is highly recommended
 that users estimate how much memory will be needed by velvetg before 
 submitting their jobs. The estimation may be calcuated using the following 
 formula:
+
 Required RAM (MB) = (-109635 + 18977*ReadSize + 86326*GenomeSize + 233353*NumReads - 51092*K)/1024
-  Read size is in bases.
-  Genome size is in millions of bases (Mb)
-  Number of reads is in millions
-  K is the kmer hash value used in velveth
+
++ Read size is in bases.
+
++ Genome size is in millions of bases (Mb)
+
++ Number of reads is in millions
+
++ K is the kmer hash value used in velveth
+
 From: http://seqanswers.com/forums/showthread.php?t=2101
 
 
@@ -131,7 +137,7 @@ From: http://seqanswers.com/forums/showthread.php?t=2101
 ##4. Trouble-shooting
 Every perl script could be separately used for advanced users. In case
  you have any problem or question about this pipeline, please E-mail 
-me at Fu-Hao.Lu@jic.ac.uk
+me at <Fu-Hao.Lu@jic.ac.uk>
 
 
 ##Author:
@@ -139,4 +145,4 @@ me at Fu-Hao.Lu@jic.ac.uk
   Post-Doctoral Scientist in Micheal Bevan laboratory
   Cell and Developmental Department, John Innes Centre
   Norwich NR4 7UH, United Kingdom
-  E-mail: Fu-Hao.Lu@jic.ac.uk
+  E-mail: <Fu-Hao.Lu@jic.ac.uk>
