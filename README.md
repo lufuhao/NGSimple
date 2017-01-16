@@ -52,19 +52,19 @@ Some necessary linux dependancies
 
 External programs:
 
-	**Program** | **Necessary/Optional** | **Homepage**
-	----------- | ---------------------- | ------------
-	[Mason](https://www.seqan.de/projects/mason/) | Msg | 
-	Trimmomatic    Msg    http://www.usadellab.org/cms/?page=trimmomatic
-	velvet         Msg    https://www.ebi.ac.uk/~zerbino/velvet/
-	MUMmer         Msg    http://mummer.sourceforge.net/
-	fastqc         Msg    http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
-	cutadapt       Opt    https://code.google.com/p/cutadapt/
-	fastq-join     Opt    https://code.google.com/p/ea-utils/
-	fastx_toolkit  Opt    http://hannonlab.cshl.edu/fastx_toolkit/index.html
-	BWA            Msg    http://bio-bwa.sourceforge.net/
-	SAMtools       Msg    http://samtools.sourceforge.net/
-	PICARD_tools   Msg    http://picard.sourceforge.net/
+	**Program** | **Necessary/Optional**
+	----------- | ----------------------
+	[Mason](https://www.seqan.de/projects/mason/) | Msg
+	[Trimmomatic](http://www.usadellab.org/cms/?page=trimmomatic) | Msg
+	[Velvet](https://www.ebi.ac.uk/~zerbino/velvet/) | Msg
+	[MUMmer](http://mummer.sourceforge.net/) | Msg
+	[FastQC](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) | Msg
+	[CutAdapt](https://code.google.com/p/cutadapt/) | Opt
+	[fastq-join](https://code.google.com/p/ea-utils/) | Opt
+	[fastx_toolkit](http://hannonlab.cshl.edu/fastx_toolkit/index.html) | Opt
+	[BWA](http://bio-bwa.sourceforge.net/) | Msg
+	[SAMtools](http://samtools.sourceforge.net/) | Msg
+	[PICARD_tools](http://picard.sourceforge.net/) | Msg
 
 NOTE: the programs need to set the environmental variables (PATH, 
 CPLUS_INCLUDE_PATH, LD_LIBRARY_PATH, etc) to be easily found. 
