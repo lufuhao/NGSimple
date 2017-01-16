@@ -66,6 +66,9 @@ they are not available in PATH.
 [SAMtools](http://samtools.sourceforge.net/) | Msg
 [PICARD_tools](http://picard.sourceforge.net/) | Msg
 
+
+Note: Tested on mason v 1.4.1, mason v2.x might change it's command
+
 NOTE: the programs need to set the environmental variables (PATH, 
 CPLUS_INCLUDE_PATH, LD_LIBRARY_PATH, etc) to be easily found. 
 
