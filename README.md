@@ -8,8 +8,8 @@ parameters (illumina sequencing type, read length, insert size and
  the best parameter combination that could contribute to a good 
 assembly.
 
-simulation.pl generates simulated reads from a reference in fasta
- format. It's recommended to **start with a short reference** (~5M 
+**simulation.pl** generates simulated reads from a reference in fasta
+ format. It's recommended to *start with a short reference* (~5M 
 bases), in case that the number of generated reads is too large for
  assembly.
 
@@ -17,14 +17,14 @@ bases), in case that the number of generated reads is too large for
 
     output: ./1.fastq/reads.fastq
 
-assemly.pl assemble the reads (./1.fastq/reads.fastq) from those 
+**assemly.pl** assemble the reads (./1.fastq/reads.fastq) from those 
 designed libraries to assemblies. based on the parameters specified 
-in CONFIG file. It will generate assmblies with different K-mer 
+in *CONFIG* file. It will generate assmblies with different K-mer 
 (./2.assembly/*), and choose the assembly with largest n50. Finally,
  it will produce a quartile summary and mummerplot for each for you 
 to select a good parameter combination.
 
-insert_size.pl will take real Illumina data as input, trim/clean (
+**insert_size.pl** will take real Illumina data as input, trim/clean (
 trimmomatic, evalaute the proportion of overlapped pairs (fastq-join),
  reverse complement (fastx_toolkit) , align to reference sequence 
 (bwa) and then determine the insert size distribution. You could 
@@ -38,6 +38,7 @@ NOTE: the insert size is NOT collected by PICARD CollectInsertSizeMetrics.jar
 ----------------------------------------------------------------------
 
 ##2. Installation
+
 This pipeline makes use of several external programs. So you may need to 
 separately install them before running this pipeline. The bash scripts in
  ProgramRoot/utils/ might help you install them if you did not install or 
@@ -51,9 +52,9 @@ Some necessary linux dependancies
 
 External programs:
 
-	**Program**		**Necessary/Optional**	**Homepage**
-
-	[Mason](https://www.seqan.de/projects/mason/)          Msg
+	**Program** | **Necessary/Optional** | **Homepage**
+	----------- | ---------------------- | ------------
+	[Mason](https://www.seqan.de/projects/mason/) | Msg | 
 	Trimmomatic    Msg    http://www.usadellab.org/cms/?page=trimmomatic
 	velvet         Msg    https://www.ebi.ac.uk/~zerbino/velvet/
 	MUMmer         Msg    http://mummer.sourceforge.net/
