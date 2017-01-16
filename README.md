@@ -9,10 +9,12 @@ parameters (illumina sequencing type, read length, insert size and
 assembly.
 
 simulation.pl generates simulated reads from a reference in fasta
- format. It's recommended to start with a short reference (~5M 
+ format. It's recommended to **start with a short reference** (~5M 
 bases), in case that the number of generated reads is too large for
  assembly.
+
     input: reference + parameter
+
     output: ./1.fastq/reads.fastq
 
 assemly.pl assemble the reads (./1.fastq/reads.fastq) from those 
@@ -49,19 +51,19 @@ Some necessary linux dependancies
 
 External programs:
 
-		**Program**		**Necessary/Optional**	**Homepage**
+	**Program**		**Necessary/Optional**	**Homepage**
 
-	*    Mason          Msg    https://www.seqan.de/projects/mason/
-	*    Trimmomatic    Msg    http://www.usadellab.org/cms/?page=trimmomatic
-	*    velvet         Msg    https://www.ebi.ac.uk/~zerbino/velvet/
-	*    MUMmer         Msg    http://mummer.sourceforge.net/
-	*    fastqc         Msg    http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
-	*    cutadapt       Opt    https://code.google.com/p/cutadapt/
-	*    fastq-join     Opt    https://code.google.com/p/ea-utils/
-	*    fastx_toolkit  Opt    http://hannonlab.cshl.edu/fastx_toolkit/index.html
-	*    BWA            Msg    http://bio-bwa.sourceforge.net/
-	*    SAMtools       Msg    http://samtools.sourceforge.net/
-	*    PICARD_tools   Msg    http://picard.sourceforge.net/
+	[Mason](https://www.seqan.de/projects/mason/)          Msg
+	Trimmomatic    Msg    http://www.usadellab.org/cms/?page=trimmomatic
+	velvet         Msg    https://www.ebi.ac.uk/~zerbino/velvet/
+	MUMmer         Msg    http://mummer.sourceforge.net/
+	fastqc         Msg    http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+	cutadapt       Opt    https://code.google.com/p/cutadapt/
+	fastq-join     Opt    https://code.google.com/p/ea-utils/
+	fastx_toolkit  Opt    http://hannonlab.cshl.edu/fastx_toolkit/index.html
+	BWA            Msg    http://bio-bwa.sourceforge.net/
+	SAMtools       Msg    http://samtools.sourceforge.net/
+	PICARD_tools   Msg    http://picard.sourceforge.net/
 
 NOTE: the programs need to set the environmental variables (PATH, 
 CPLUS_INCLUDE_PATH, LD_LIBRARY_PATH, etc) to be easily found. 
@@ -74,9 +76,9 @@ you want (/etc/profile or ~/.bashrc):
 
 ##3. Running
 
-###3.1 configuring parameter $PWD/CONFIG
+###3.1 configuring parameters
 
-$PWD/CONFIG file
+CONFIG file
 
 	################## File border ######################################
 	#Example:
@@ -107,8 +109,9 @@ $PWD/CONFIG file
 
 
 ###3.2 Running NGSimple
+
 bash$ ngsimple -i CONFIG -t 5
-	
+
 NOTE: Since Velvet is extremely memory-consuming, it is highly recommended 
 that users estimate how much memory will be needed by velvetg before 
 submitting their jobs. The estimation may be calcuated using the following 
