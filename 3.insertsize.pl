@@ -9,7 +9,9 @@ use constant USAGE=><<EOH;
 SYNOPSIS:
 
 perl $0 --input my.fa [Options]
-Version: LUFUHAO20141016
+
+Version: 
+	v20141119
 
 Requirements:
 	Programs:
