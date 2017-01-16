@@ -1,6 +1,6 @@
-NGSimple (Next-Generation illumina SIMulation PipeLinE) 
+#NGSimple (Next-Generation illumina SIMulation PipeLinE) 
 ------------------------------------------------------------------
-1. Usage
+## 1. Usage
 
 This pipeline, mainly written in perl is designed to simulate NGS 
 parameters (illumina sequencing type, read length, insert size and
@@ -33,38 +33,32 @@ for example, if read mapping is produced by BWA, XT:A:U flag could be
 
 NOTE: the insert size is NOT collected by PICARD CollectInsertSizeMetrics.jar
 
-Author:
-  Fu-Hao Lu
-  Post-Doctoral Scientist in Micheal Bevan laboratory
-  Cell and Developmental Department, John Innes Centre
-  Norwich NR4 7UH, United Kingdom
-  E-mail: Fu-Hao.Lu@jic.ac.uk
 ----------------------------------------------------------------------
 
-2. Installation
+##2. Installation
 This pipeline makes use of several external programs. So you may need to 
 separately install them before running this pipeline. The bash scripts in
  ProgramRoot/utils/ might help you install them if you did not install or 
 they are not available in PATH. 
 
 Some necessary linux dependancies
-	make, cmake, gcc, g++, gcc-c++, tar, unzip, GD, etc
-	zlib, boost, ncurses, sparsehash, etc
-	PerlIO::gzip, GD::Graphics::bars, Getopt::Long, List::Util, Cwd, FindBin, etc
-	
+*    make, cmake, gcc, g++, gcc-c++, tar, unzip, GD, etc
+*    zlib, boost, ncurses, sparsehash, etc
+*    PerlIO::gzip, GD::Graphics::bars, Getopt::Long, List::Util, Cwd, FindBin, etc
+
 External programs:
-Program		Necessary/Optional	Homepage
-Mason		Msg	https://www.seqan.de/projects/mason/
-Trimmomatic	Msg	http://www.usadellab.org/cms/?page=trimmomatic
-velvet		Msg	https://www.ebi.ac.uk/~zerbino/velvet/
-MUMmer		Msg	http://mummer.sourceforge.net/
-fastqc		Msg	http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
-cutadapt	Opt	https://code.google.com/p/cutadapt/
-fastq-join	Opt	https://code.google.com/p/ea-utils/
-fastx_toolkit	Opt	http://hannonlab.cshl.edu/fastx_toolkit/index.html
-BWA		Msg	http://bio-bwa.sourceforge.net/
-SAMtools	Msg	http://samtools.sourceforge.net/
-PICARD_tools	Msg	http://picard.sourceforge.net/
+*Program		Necessary/Optional	Homepage
+*Mason		Msg	https://www.seqan.de/projects/mason/
+*Trimmomatic	Msg	http://www.usadellab.org/cms/?page=trimmomatic
+*velvet		Msg	https://www.ebi.ac.uk/~zerbino/velvet/
+*MUMmer		Msg	http://mummer.sourceforge.net/
+*fastqc		Msg	http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+*cutadapt	Opt	https://code.google.com/p/cutadapt/
+*fastq-join	Opt	https://code.google.com/p/ea-utils/
+*fastx_toolkit	Opt	http://hannonlab.cshl.edu/fastx_toolkit/index.html
+*BWA		Msg	http://bio-bwa.sourceforge.net/
+*SAMtools	Msg	http://samtools.sourceforge.net/
+*PICARD_tools	Msg	http://picard.sourceforge.net/
 
 NOTE: the programs need to set the environmental variables (PATH, 
 CPLUS_INCLUDE_PATH, LD_LIBRARY_PATH, etc) to be easily found. 
@@ -75,8 +69,8 @@ you want (/etc/profile or ~/.bashrc):
 	export PATH=/path/to/program_root:$PATH
 
 
-3. Running
-3.1 configuring parameter $PWD/CONFIG
+##3. Running
+###3.1 configuring parameter $PWD/CONFIG
 
 $PWD/CONFIG file
 ################## File border ######################################
@@ -107,8 +101,8 @@ Assem3
 ################## File border ######################################
 
 
-3.2 Running NGSimple
-	bash$ ngsimple -i CONFIG -t 5
+###3.2 Running NGSimple
+bash$ ngsimple -i CONFIG -t 5
 	
 NOTE: Since Velvet is extremely memory-consuming, it is highly recommended 
 that users estimate how much memory will be needed by velvetg before 
@@ -122,10 +116,18 @@ Required RAM (MB) = (-109635 + 18977*ReadSize + 86326*GenomeSize + 233353*NumRea
 From: http://seqanswers.com/forums/showthread.php?t=2101
 
 
-3.3 Determine insert size distribution (NOT using Picard CollectInsertSizeMetrics.jar)
+###3.3 Determine insert size distribution (NOT using Picard CollectInsertSizeMetrics.jar)
 	bash$ 3.insertsize.pl --help
 
-4. Trouble-shooting
+##4. Trouble-shooting
 Every perl script could be separately used for advanced users. In case
  you have any problem or question about this pipeline, please E-mail 
 me at Fu-Hao.Lu@jic.ac.uk
+
+
+##Author:
+  Fu-Hao Lu
+  Post-Doctoral Scientist in Micheal Bevan laboratory
+  Cell and Developmental Department, John Innes Centre
+  Norwich NR4 7UH, United Kingdom
+  E-mail: Fu-Hao.Lu@jic.ac.uk
