@@ -334,8 +334,8 @@ if ($test_run_bwa){
 		die "Error at $Stage: Can not find PICARD_HOME or path to PICARD\n";
 	}
 	$picard_memory='2g' unless (defined $picard_memory);
-	(defined $path_samtools) ? (&TestCmdExist($path_samtools)) : ($path_samtools='samtools');
 }
+(defined $path_samtools) ? (&TestCmdExist($path_samtools)) : ($path_samtools='samtools');
 
 ###fastqjoin
 if ($test_run_fastqjoin) {
@@ -365,16 +365,17 @@ if ($test_run_bwa) {
 	unless (defined $maximum_insertsize) {
 		die "Error at $Stage: Please specify maximum insert size for BWA\n";
 	}
-	$min_mapq=5 unless (defined $min_mapq);
+	
 	$test_reIndex=0 unless (defined $test_reIndex);
 	die "Please specify maximum insert size for BWA\n" unless (defined $maximum_insertsize);
 }
+$min_mapq=2 unless (defined $min_mapq);
 $minimum_insertsize=0 unless (defined $minimum_insertsize);
 
 
 
 ###Main#################################################
-&PreCheck();
+&PreCheck() unless ($test_use_bam);
 foreach (@procdures){
 	MYTEST01: {
 		if ($_==1 and $test_use_bam==0){&CutAdapt(); last MYTEST01};
@@ -386,6 +387,7 @@ foreach (@procdures){
 #		if ($_==7){&ExtractPaired(); last MYTEST01};
 #		if ($_==8){&ExtractUnique(); last MYTEST01};
 		if ($_==7){&InsertSizeCollect();last MYTEST01};
+		die "Error at $Stage: unknown procedure: $_\n";
 	}
 }
 
@@ -731,7 +733,6 @@ sub InsertSizeCollect {
 	my $newdir=$run_dir.'/step'.$stepth.'_InsertSizeCollect';
 	mkdir ($newdir, 0766) || die "Error at $Stage: can not create directory $newdir\n";
 	chdir "$newdir" or die "Error at $Stage: can not cd dir $newdir：$!\n";
-	
 	for (my $i=0; $i<$num_groupofreads;$i++) {
 		$cmd="perl $Bin/utils/getInsertSize_from_sambam_LUF.pl --min_insertsize $minimum_insertsize --max_insertsize $maximum_insertsize --min_mapq $min_mapq --path_samtools $path_samtools --input $BamGroups[$i] ";
 		my $outputPaired=$prefix."_L$i"."_Paired.sum";
