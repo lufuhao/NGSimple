@@ -49,19 +49,19 @@ Some necessary linux dependancies
 
 External programs:
 
-    **Program**		**Necessary/Optional**	**Homepage**
+		**Program**		**Necessary/Optional**	**Homepage**
 
-*    Mason          Msg    https://www.seqan.de/projects/mason/
-*    Trimmomatic    Msg    http://www.usadellab.org/cms/?page=trimmomatic
-*    velvet         Msg    https://www.ebi.ac.uk/~zerbino/velvet/
-*    MUMmer         Msg    http://mummer.sourceforge.net/
-*    fastqc         Msg    http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
-*    cutadapt       Opt    https://code.google.com/p/cutadapt/
-*    fastq-join     Opt    https://code.google.com/p/ea-utils/
-*    fastx_toolkit  Opt    http://hannonlab.cshl.edu/fastx_toolkit/index.html
-*    BWA            Msg    http://bio-bwa.sourceforge.net/
-*    SAMtools       Msg    http://samtools.sourceforge.net/
-*    PICARD_tools   Msg    http://picard.sourceforge.net/
+	*    Mason          Msg    https://www.seqan.de/projects/mason/
+	*    Trimmomatic    Msg    http://www.usadellab.org/cms/?page=trimmomatic
+	*    velvet         Msg    https://www.ebi.ac.uk/~zerbino/velvet/
+	*    MUMmer         Msg    http://mummer.sourceforge.net/
+	*    fastqc         Msg    http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+	*    cutadapt       Opt    https://code.google.com/p/cutadapt/
+	*    fastq-join     Opt    https://code.google.com/p/ea-utils/
+	*    fastx_toolkit  Opt    http://hannonlab.cshl.edu/fastx_toolkit/index.html
+	*    BWA            Msg    http://bio-bwa.sourceforge.net/
+	*    SAMtools       Msg    http://samtools.sourceforge.net/
+	*    PICARD_tools   Msg    http://picard.sourceforge.net/
 
 NOTE: the programs need to set the environmental variables (PATH, 
 CPLUS_INCLUDE_PATH, LD_LIBRARY_PATH, etc) to be easily found. 
