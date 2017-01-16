@@ -15,7 +15,7 @@ perl $0 -i reference.fa --lib_type se|pe|mp --lib_read_length INT --lib_size INT
 	PATH: output path/directory
 	
 VERSION
-	LUFUHAO20140704
+	20170117
 
 DESCRIPTION
 	Simulation reads with specied insert sizes, read length and sequencing coverages;
