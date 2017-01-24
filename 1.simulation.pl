@@ -83,21 +83,21 @@ our ($help_message, $input_fasta, $config_file, $seed, $output_dir, $output_form
 our ($lib_type, $lib_read_length, $lib_size, $lib_size_stdev, $lib_cov, @lib_types, @lib_read_lengths, @lib_sizes, @lib_covs);
 
 GetOptions (
-'help|h!'=> \$help_message,
-'reference|i:s' => \$input_fasta,
-'config|c:s' => \$config_file,
-'lib_insertsize:s' => \$lib_size,
-'lib_size_stdev:i' => \$lib_size_stdev,
-'lib_cov:i' => \$lib_cov,
-'lib_type:s' => \$lib_type,
-'lib_read_length:s' => \$lib_read_length,
-'seed|s:i'=> \$seed,
-'output_dir|o:s'=> \$output_dir,
-#'output_fmt:s'=> \$output_format,
-'mason_path:s'=> \$masonpath,
-'ref_length'=> \$fasta_total_length,
-'verbose!'=> \$verbose,
-'version|v!'=> \$version,
+	'help|h!'=> \$help_message,
+	'reference|i:s' => \$input_fasta,
+	'config|c:s' => \$config_file,
+	'lib_insertsize:s' => \$lib_size,
+	'lib_size_stdev:i' => \$lib_size_stdev,
+	'lib_cov:i' => \$lib_cov,
+	'lib_type:s' => \$lib_type,
+	'lib_read_length:s' => \$lib_read_length,
+	'seed|s:i'=> \$seed,
+	'output_dir|o:s'=> \$output_dir,
+	#'output_fmt:s'=> \$output_format,
+	'mason_path:s'=> \$masonpath,
+	'ref_length'=> \$fasta_total_length,
+	'verbose!'=> \$verbose,
+	'version|v!'=> \$version,
 );
 ($help_message or $version) and die USAGE;
 
