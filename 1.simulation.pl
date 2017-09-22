@@ -4,6 +4,7 @@ use warnings;
 use Getopt::Long;
 use List::Util qw/max min/;
 use Cwd;
+use Data::Dumper qw /Dumper/;
 use FindBin qw($Bin);
 use constant USAGE=><<EOH;
 
@@ -15,7 +16,7 @@ perl $0 -i reference.fa --lib_type se|pe|mp --lib_read_length INT --lib_size INT
 	PATH: output path/directory
 	
 VERSION
-	20170117
+	20170206
 
 DESCRIPTION
 	Simulation reads with specied insert sizes, read length and sequencing coverages;
@@ -58,6 +59,8 @@ OPTIONS
 	--ref_length <INT>
 		[Opt] total length of input fasta to calculate number of reads;
 		Default: internal calculation by counting characters;
+	--simall
+		[Opt] simulate all libs, not only those libs to assemble;
 	--verbose
 		[Opt] Detailed output for trouble-shooting;
 	--version/-v
@@ -79,9 +82,9 @@ die USAGE unless @ARGV;
 
 
 
-our ($help_message, $input_fasta, $config_file, $seed, $output_dir, $output_format, $fasta_total_length, $masonpath, $verbose, $version);
-our ($lib_type, $lib_read_length, $lib_size, $lib_size_stdev, $lib_cov, @lib_types, @lib_read_lengths, @lib_sizes, @lib_covs);
-
+my ($help_message, $input_fasta, $config_file, $seed, $output_dir, $output_format, $fasta_total_length, $masonpath, $verbose, $version);
+my ($lib_type, $lib_read_length, $lib_size, $lib_size_stdev, $lib_cov, @lib_types, @lib_read_lengths, @lib_sizes, @lib_covs);
+my $test_lib2all=0;
 GetOptions (
 	'help|h!'=> \$help_message,
 	'reference|i:s' => \$input_fasta,
@@ -93,6 +96,7 @@ GetOptions (
 	'lib_read_length:s' => \$lib_read_length,
 	'seed|s:i'=> \$seed,
 	'output_dir|o:s'=> \$output_dir,
+	'simall!' => \$test_lib2all,
 	#'output_fmt:s'=> \$output_format,
 	'mason_path:s'=> \$masonpath,
 	'ref_length'=> \$fasta_total_length,
@@ -103,16 +107,25 @@ GetOptions (
 
 
 
+###Default value#############################
+$lib_size_stdev=10 unless (defined $lib_size_stdev);
+$seed=88 unless (defined $seed);
+$fasta_total_length=0 unless (defined $fasta_total_length);
+my %libs2simulate=();
+###End#######################################
+
+
+
 ###Input test##############################
-our %RCFcomb=();
-our %RCFlib=();
-our @lib_names=();
+my %RCFcomb=();
+my %RCFlib=();
+my @lib_names=();
 if (defined $config_file and -s $config_file) {
 	&ReadConfigureFile($config_file);
 }
 else {
 	if (defined $input_fasta and -s $input_fasta) {
-		die "Please input the fasta reference\n";
+		die "Error: Please input the fasta reference\n";
 	}
 	else{
 		print "Your input fasta file is $input_fasta\n";
@@ -122,14 +135,14 @@ else {
 		print "Library_type: @lib_types\n";
 	}
 	else {
-		die "Please input the lib_type, or specify that in config_file\n";
+		die "Error: Please input the lib_type, or specify that in config_file\n";
 	}
 	if (defined $lib_read_length) {
 		@lib_read_lengths=split(/,/, $lib_read_length);
 		print "Library_read_length: @lib_read_lengths\n";
 	}
 	else {
-		die "Please input the read_length or specify that in config_file\n";
+		die "Error: Please input the read_length or specify that in config_file\n";
 	}
 	$lib_size=0 unless (defined $lib_size);
 	@lib_sizes=split(/,/, $lib_size);
@@ -139,13 +152,13 @@ else {
 		print "Library_coverage: @lib_covs\n";
 	}
 	else {
-		die "Please input the coverage corresponding to the lib_size\n";
+		die "Error: Please input the coverage corresponding to the lib_size\n";
 	}
 }
 ###test if the arrays get the same lenth
 my $max_num_sim=max scalar(@lib_types),scalar(@lib_read_lengths),scalar(@lib_covs);
 my $min_num_sim=min scalar(@lib_types),scalar(@lib_read_lengths),scalar(@lib_covs);
-die "Empty lib_types, lib_read_lengths or lib_covs\n" if ($min_num_sim<1 or $max_num_sim<1);
+die "Error: Empty lib_types, lib_read_lengths or lib_covs\n" if ($min_num_sim<1 or $max_num_sim<1);
 &AutoFilArr($max_num_sim, @lib_types);
 &AutoFilArr($max_num_sim, @lib_read_lengths);
 &AutoFilArr($max_num_sim, @lib_covs);
@@ -189,13 +202,6 @@ my $mason_test=&exec_cmd("which $masonpath");
 
 
 
-###Default value#############################
-$lib_size_stdev=10 unless (defined $lib_size_stdev);
-$seed=88 unless (defined $seed);
-$fasta_total_length=0 unless (defined $fasta_total_length);
-###End#######################################
-
-
 
 ###Calculate.total.length.of.fasta###########
 if ($fasta_total_length == 0) {
@@ -212,7 +218,14 @@ my $num_successful_sim=0;
 chdir "$output_dir" or die "Can not cd dir $output_dir£º$!\n";
 mkdir ("$output_dir/1.fastq", 0766) || die "Can not create directory $output_dir/1.fastq\n";
 chdir "$output_dir/1.fastq" or die "Can not cd dir \"$output_dir/1.fastq\"£º$!\n";
+#print "Test: libs2simulate\n"; print Dumper \%libs2simulate; print "\n"; ### For test ###
 for (my $i=0; $i<$max_num_sim; $i++) {
+	if (scalar(keys %RCFcomb)>0 and $test_lib2all==0) {
+		unless (exists $libs2simulate{$lib_names[$i]}) {
+			print STDERR "Warnings: ignored lib $lib_names[$i] due to not to be assembled\n";
+			next;
+		}
+	}
 	my @lib=();
 	@lib=($input_fasta, $seed, $lib_read_lengths[$i], $output_format, $lib_covs[$i], $lib_types[$i], $lib_sizes[$i], $lib_size_stdev);
 #required: 	my ($input, $seed, $read_length, $format, $cov, $type, $insert_size, $insert_size_sd);
@@ -222,7 +235,7 @@ for (my $i=0; $i<$max_num_sim; $i++) {
 	}
 }
 print "\n\n\nSummary: $num_successful_sim OUT of total $max_num_sim libs successfully finished\n\n\n";
-chdir "$output_dir" or die "Can not cd dir $output_dir£º$!\n";
+chdir "$output_dir" or die "Error: Can not cd dir $output_dir£º$!\n";
 ###End##############################
 
 
@@ -282,8 +295,9 @@ sub ReadConfigureFile {
 			@RCFcombination=split(/\t/, $line);
 			if (scalar(@RCFcombination)>=2 and scalar(@RCFcombination)<=11) {
 				for (my $j=0; $j<scalar(@RCFcombination)-1; $j++) {
-					die "Unknown conbination $RCFcombination[0]\n" unless (exists $RCFlib{$RCFcombination[$j+1]});
+					die "Error: Unknown conbination $RCFcombination[0]\n" unless (exists $RCFlib{$RCFcombination[$j+1]});
 					@{${$RCFcomb{$RCFcombination[0]}}[$j]}=@{$RCFlib{$RCFcombination[$j+1]}};
+					$libs2simulate{$RCFcombination[$j+1]}++;
 				}
 			}
 		}
