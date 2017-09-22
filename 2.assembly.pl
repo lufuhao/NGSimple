@@ -12,7 +12,7 @@ SYNOPSIS
 perl $0 --config CONFIG --output_dir ./
 	
 VERSION
-	LUFUHAO20170124
+	LUFUHAO20170206
 
 DESCRIPTION
 	Assemble the simulated reads under output_dir/1.Fastq by 
@@ -40,6 +40,8 @@ OPTIONS
 	--output_dir|-d <PATH>
 		[Opt] Path containing simulated reads: '1.Fastq';
 		Default: ./
+	--ploteachK
+		[Opt] Whether run mummplot for each K
 	--path_java </Path/to/java>
 		[Opt] path to java if Not in PATH;
 	--path_trimmomatic </Path/to/trimmomatic.jar>
@@ -84,6 +86,7 @@ my ($input_fasta, $path_velvetg, $path_velveth);
 my ($path_nucmer, $path_deltafilter, $path_mummerplot);
 my $quality_score_format;
 
+my $mummer_each_K=0;### 1: run mummplot for each K; 0 just for best K
 GetOptions (
 'help|h!'=> \$help_message,
 'config|c:s' => \$config_file,
@@ -93,6 +96,7 @@ GetOptions (
 'path_java:s' => \$path_java,
 'path_trimmomatic:s' => \$path_trimmomatic,
 'minlength|l:i' => \$trimmo_minlen,
+'ploteachK!' => \$mummer_each_K,
 'path_velvetg:s' => \$path_velvetg,
 'path_velveth:s' => \$path_velveth,
 'path_nucmer:s' => \$path_nucmer,
@@ -122,8 +126,10 @@ $path_velvetg='velvetg' unless (defined $path_velvetg);
 $path_nucmer='nucmer' unless (defined $path_nucmer);
 $path_deltafilter='delta-filter' unless (defined $path_deltafilter);
 $path_mummerplot='mummerplot' unless (defined $path_mummerplot);
+my $test_deletetempKfolder=1;
 my @longestcontigfiles=();
 my @allcontigfile=();
+
 ###test output
 my $run_dir=getcwd;
 $output_dir=$run_dir unless (defined $output_dir);
@@ -145,8 +151,8 @@ if (-d "$output_dir/2.assembly") {
 }
 mkdir ("$output_dir/2.assembly", 0766) || die "Error: can not create directory:$output_dir/2.assembly\n";
 &ReadConfigureFile($config_file);
-die "Please specify your referece sequence in CONFIG file\n" unless (defined $input_fasta and $input_fasta ne '');
-foreach my $AssemblyIndex (keys %RCFcomb) {
+die "Error: Please specify your referece sequence in CONFIG file\n" unless (defined $input_fasta and $input_fasta ne '');
+foreach my $AssemblyIndex (sort keys %RCFcomb) {
 	print "Assembling Index: $AssemblyIndex\n";
 	unless (&SettingVelvet($AssemblyIndex)) {
 		print STDERR "Warnings: Failed assembly: $AssemblyIndex\n";
@@ -319,7 +325,7 @@ sub SettingVelvet {
 			link("$newdir/K$SVguess_beskK/$SVindex.K$SVguess_beskK.AllContigs.ps", "$SVindex.K$SVguess_beskK.AllContigs.ps");
 		}
 		if (-s "$newdir/K$SVguess_beskK/$SVindex.K$SVguess_beskK.LongestContig.png") {
-			link("./K$SVguess_beskK/$SVindex.K$SVguess_beskK.LongestContig.png", "$SVindex.K$SVguess_beskK.LongestContig.png");
+			link("$newdir/K$SVguess_beskK/$SVindex.K$SVguess_beskK.LongestContig.png", "$SVindex.K$SVguess_beskK.LongestContig.png");
 		}
 		if (-s "$newdir/K$SVguess_beskK/$SVindex.K$SVguess_beskK.LongestContig.ps") {
 			link("$newdir/K$SVguess_beskK/$SVindex.K$SVguess_beskK.LongestContig.ps", "$SVindex.K$SVguess_beskK.LongestContig.ps");
@@ -353,28 +359,61 @@ sub SettingVelvet {
 			print STDERR "Error: Failed to select best K ", ($SVguess_beskK-2), " to ", ($SVguess_beskK+2), "\n";
 			return 0;
 		}
-		if (-s "./K$SVbestKmer3/contigs.fa" and -s "./K$SVbestKmer3/longest_contig.fa") {
-			link("./K$SVbestKmer3/contigs.fa", "$SVindex.K$SVbestKmer3.contigs.fa");
-			link("./K$SVbestKmer3/longest_contig.fa", "$SVindex.K$SVbestKmer3.LongestContig.fa");
+		if (-s "$newdir/K$SVbestKmer3/contigs.fa" and -s "$newdir/K$SVbestKmer3/longest_contig.fa") {
+			link("$newdir/K$SVbestKmer3/contigs.fa", "$SVindex.K$SVbestKmer3.contigs.fa");
+			link("$newdir/K$SVbestKmer3/longest_contig.fa", "$SVindex.K$SVbestKmer3.LongestContig.fa");
+			unless ($mummer_each_K) {
+				unless (&MumStats($input_fasta, "$newdir/K$SVbestKmer3/contigs.fa", "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.AllContigs")) {
+					print STDERR "Error: MUMmerplot running failed: AllContigs $SVindex K$SVbestKmer3\n";
+					return 0;
+				}
+				unless (&MumStats($input_fasta, "$newdir/K$SVbestKmer3/longest_contig.fa", "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.LongestContig")) {
+					print STDERR "Error: MUMmerplot running failed: LongestContig $SVindex K$SVbestKmer3\n";
+					return 0;
+				}
+			}
 		}
 		else {
-			print STDERR "Error: Failed to find assemblies: ./K$SVbestKmer3/contigs.fa and ./K$SVbestKmer3/longest_contig.fa\n";
+			print STDERR "Error: Failed to find assemblies: $newdir/K$SVbestKmer3/contigs.fa and $newdir/K$SVbestKmer3/longest_contig.fa\n";
 			return 0;
 		}
-		if (-s "./K$SVbestKmer3/K$SVguess_beskK.AllContigs.png") {
-			link("./K$SVbestKmer3/K$SVguess_beskK.AllContigs.png", "$SVindex.K$SVbestKmer3.AllContigs.png");
+		if (-s "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.AllContigs.png") {
+			link("$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.AllContigs.png", "$SVindex.K$SVbestKmer3.AllContigs.png");
 		}
-		if (-s "./K$SVbestKmer3/K$SVguess_beskK.AllContigs.ps") {
-			link("./K$SVbestKmer3/K$SVguess_beskK.AllContigs.ps", "$SVindex.K$SVbestKmer3.AllContigs.ps");
+		if (-s "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.AllContigs.ps") {
+			link("$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.AllContigs.ps", "$SVindex.K$SVbestKmer3.AllContigs.ps");
 		}
-		if (-s "./K$SVbestKmer3/K$SVguess_beskK.LongestContig.png") {
-			link("./K$SVbestKmer3/K$SVguess_beskK.LongestContig.png", "$SVindex.K$SVbestKmer3.LongestContig.png");
+		if (-s "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.LongestContig.png") {
+			link("$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.LongestContig.png", "$SVindex.K$SVbestKmer3.LongestContig.png");
 		}
-		if (-s "./K$SVbestKmer3/K$SVguess_beskK.LongestContig.ps") {
-			link("./K$SVbestKmer3/K$SVguess_beskK.LongestContig.ps", "$SVindex.K$SVbestKmer3.LongestContig.ps");
+		if (-s "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.LongestContig.ps") {
+			link("$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.LongestContig.ps", "$SVindex.K$SVbestKmer3.LongestContig.ps");
+		}
+		
+		push (@allcontigfile, "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.AllContigs.fplot") if (-s "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.AllContigs.fplot");
+		push (@allcontigfile, "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.AllContigs.rplot") if (-s "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.AllContigs.rplot");
+		push (@allcontigfile, "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.AllContigs.gp") if (-s "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.AllContigs.gp");
+		
+		
+		push (@longestcontigfiles, "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.LongestContig.fplot") if (-s "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.LongestContig.fplot");
+		push (@longestcontigfiles, "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.LongestContig.rplot") if (-s "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.LongestContig.rplot");
+		push (@longestcontigfiles, "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.LongestContig.gp") if (-s "$newdir/K$SVbestKmer3/$SVindex.K$SVbestKmer3.LongestContig.gp");
+		
+		if ($test_deletetempKfolder) {
+			my @SVfolders=<$newdir/*>;
+			foreach my $SVindfolder (@SVfolders) {
+				if (-d $SVindfolder and ($SVindfolder ne "$newdir/K$SVbestKmer3")) {
+					unless (&exec_cmd("rm -rf $SVindfolder > /dev/null 2>&1")) {
+						print STDERR "Warnings: Unable to delete path: $SVindfolder";
+					}
+				}
+			}
 		}
 	}
-	chdir "$output_dir" or die "Velvet error: can not cd dir $output_dir：$!\n";
+	
+	unless (chdir "$output_dir") {
+		print STDERR "Warnings: Velvet error: can not cd dir $output_dir：$!\n";
+	}
 	
 	return 1;
 }
@@ -403,7 +442,7 @@ sub ReadFastqFiles {
 			if (-s $RFFfile_basename.'_1.fq' and -s $RFFfile_basename.'_2.fq') {
 				&Trimmomatic($RFFfile_basename.'_1.fq', $RFFfile_basename.'_2.fq', 2);
 			}else {
-				die "Can not find Fq files: $RFFfile_basename'_1.fq' and $RFFfile_basename'_2.fq'";
+				die "Error: Can not find Fq files: ".$RFFfile_basename."_1.fq and ".$RFFfile_basename."_2.fq\n";
 			}
 			
 		}
@@ -639,19 +678,22 @@ sub RunVelvet {
 		print STDERR "Error: Can not find Velvet output: $RVassembly_fa\n";
 		return 0;
 	}
-	unless (&MumStats($input_fasta, $RVassembly_fa, "$RVindex.$RVassemblydir.AllContigs")) {
-		print STDERR "Error: MUMmerplot running failed: AllContigs $RVindex $RVassemblydir\n";
-		return 0;
+	if ($mummer_each_K) {
+		unless (&MumStats($input_fasta, $RVassembly_fa, "$RVindex.$RVassemblydir.AllContigs")) {
+			print STDERR "Error: MUMmerplot running failed: AllContigs $RVindex $RVassemblydir\n";
+			return 0;
+		}
 	}
 	&ContigsStats($RVassembly_fa, 'longest_contig.fa', 0);
 	unless (-s "$RVcurdir/longest_contig.fa") {
 		print STDERR "Error: Can not find longest contigs file: $RVcurdir/longest_contig.fa";
 		return 0;
 	}
-	
-	unless (&MumStats($input_fasta, "$RVcurdir/longest_contig.fa", "$RVindex.$RVassemblydir.LongestContig")) {
-		print STDERR "Error: MUMmerplot running failed: LongestContig $RVindex $RVassemblydir\n";
-		return 0;
+	if ($mummer_each_K) {
+		unless (&MumStats($input_fasta, "$RVcurdir/longest_contig.fa", "$RVindex.$RVassemblydir.LongestContig")) {
+			print STDERR "Error: MUMmerplot running failed: LongestContig $RVindex $RVassemblydir\n";
+			return 0;
+		}
 	}
 	unless (chdir "../") {
 		print STDERR "Velvet Error: can not cd dir ../：$!\n";
@@ -678,8 +720,8 @@ sub MumStats {
 		print STDERR "Error: failed to run delta-filter\n";
 		return 0;
 	}
-#	$mum_cmd="$path_mummerplot --large --layout -p $MSoutput --png $MSoutput.filter.q ";
-	$mum_cmd="$path_mummerplot --large --layout -p $MSoutput --postscript $MSoutput.filter.q ";
+#	$mum_cmd="$path_mummerplot --large --layout -p $MSoutput --png $MSoutput.filter.q > /dev/null 2>&1";
+	$mum_cmd="$path_mummerplot --large --layout -p $MSoutput --postscript $MSoutput.filter.q";
 	unless (&exec_cmd($mum_cmd)) {
 		print STDERR "Error: failed to run mummerplot\n";
 		return 0;
@@ -840,12 +882,12 @@ sub AssemblySummary {
 	}
 	close ASSTATS;
 	
-	unless (&exec_cmd("cp $output_dir/2.assembly/*/*.png $output_dir/2.assembly/*/*.ps ./")) {
+	unless (&exec_cmd("cp -f $output_dir/2.assembly/*/*.png $output_dir/2.assembly/*/*.ps $newdir/")) {
 		print STDERR "Warnings: failed to collect images\n";
 	}
 	if (mkdir ("$newdir/all", 0766)) {
 		foreach (@allcontigfile) {
-			unless (&exec_cmd("cp $_ $newdir/all/")) {
+			unless (&exec_cmd("cp -f $_ $newdir/all/")) {
 				print STDERR "Warnings: copy file failed: $_ to $newdir/all/\n";
 			}
 		}
@@ -856,7 +898,7 @@ sub AssemblySummary {
 	
 	if (mkdir ("$newdir/longest", 0766)) {
 		foreach (@longestcontigfiles) {
-			unless (&exec_cmd("cp $_ $newdir/longest/")) {
+			unless (&exec_cmd("cp -f $_ $newdir/longest/")) {
 				print STDERR "Warnings: copy file failed: $_ to $newdir/longest/\n";
 			}
 		}
