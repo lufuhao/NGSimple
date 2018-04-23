@@ -156,3 +156,6 @@ Cell and Developmental Department, John Innes Centre
 Norwich NR4 7UH, United Kingdom
 
 E-mail: <Fu-Hao.Lu@jic.ac.uk>
+
+##Copyright
+Copyright (c) 2014-2018 Fu-Hao Lu
